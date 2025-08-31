@@ -43,7 +43,7 @@ export const modelsMapping: Record<string, string> = {
   24: 'north_crater_barrier',
   25: 'ancient_forest',
   26: 'key_of_the_ancients',
-  27: 'unknown_27',
+  27: 'unused_rocks',
   28: 'red_submarine',
   29: 'ruby_weapon',
   30: 'emerald_weapon',

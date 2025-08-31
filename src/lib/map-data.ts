@@ -39,7 +39,7 @@ export const TRIANGLE_TYPES: Record<number, { type: string; description: string 
   12: { type: 'Cliff', description: 'Sharp drop, usually where the player can be on either side.' },
   13: { type: 'Corel Bridge', description: 'Tiny bridge over the waterfall from Costa del Sol to Corel.' },
   14: { type: 'Wutai Bridge', description: 'Rickety rope bridges south of Wutai.' },
-  15: { type: 'Unused', description: "Doesn't seem to be used anywhere in the original data." },
+  15: { type: 'Underwater tunnel', description: "Prevents the submarine from surfacing." },
   16: { type: 'Hill side', description: 'This is the tiny walkable part at the foot of a mountain.' },
   17: { type: 'Beach', description: 'Where land and shallow water meets.' },
   18: { type: 'Sub Pen', description: 'Only place where you can enter/exit the submarine.' },
