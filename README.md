@@ -34,7 +34,7 @@ Scripts
 * [x] Custom mapping for Entities and Fields namespaces
 * [x] Can't properly set script alias - the dropdown disappears when you enable an alias
 * [x] System.call_function has wrong sidebar ui
-* [ ] System.set_field_entry_by_id(51) in chocobo_29 model script - wrong opcode?
+* [x] System.set_field_entry_by_id(51) in chocobo_29 model script - wrong opcode?
   * Another example in system_27
 * [ ] System.fade_out and fade_in has unknown 2nd parameter
 * [ ] Entity.set_vertical_speed - has "unknown" parameter

@@ -29,6 +29,114 @@ type CustomRenderer = (
   onBatchChange: (updates: Array<{ index: number; newText: string }>) => void
 ) => JSX.Element
 
+// Custom hook for field selection logic
+function useFieldSelection(scenario?: number) {
+  const [options, setOptions] = useState<Array<{ id: number; fieldId: number; label: string }>>([])
+  const [nameByFieldId, setNameByFieldId] = useState<Record<number, string>>({})
+  const { entries, loadLocations } = useLocationsState()
+
+  // Ensure we have scene labels and locations loaded
+  useEffect(() => {
+    let mounted = true
+    loadFieldOptions().then(({ byId }) => {
+      if (mounted) setNameByFieldId(byId)
+    })
+    if (!entries || entries.length === 0) {
+      loadLocations()
+    }
+    return () => {
+      mounted = false
+    }
+  }, [entries?.length, loadLocations])
+
+  // Recompute dropdown options when entries change
+  useEffect(() => {
+    if (!entries || entries.length === 0) {
+      setOptions([])
+      return
+    }
+    const opts: Array<{ id: number; fieldId: number; label: string }> = entries.map((entry, idx) => {
+      const fieldId = scenario === 1 ? entry.alternative.fieldId : entry.default.fieldId
+      const sceneLabel = nameByFieldId[fieldId] ?? String(fieldId)
+      return { id: idx + 1, fieldId, label: `${idx + 1} - ${sceneLabel}` }
+    })
+    setOptions(opts)
+  }, [entries, nameByFieldId, scenario])
+
+  // Helper function to determine current selection
+  const getCurrentId = (rawText: string) => {
+    let currentId = 0
+    const fieldsSlugMatch = rawText.match(/^Fields\.([A-Za-z0-9_]+)$/i)
+    if (fieldsSlugMatch && entries && entries.length > 0) {
+      const slug = fieldsSlugMatch[1]
+      // Build reverse map slug -> location index (as defined in fieldsMapping)
+      const slugToLocIndex: Record<string, number> = {}
+      Object.entries(fieldsMapping).forEach(([locIndex, s]) => {
+        slugToLocIndex[s] = Number(locIndex)
+      })
+      const wantedIndex = slugToLocIndex[slug]
+      currentId = wantedIndex && wantedIndex >= 1 && wantedIndex <= (entries?.length ?? 0) ? wantedIndex : 0
+    } else {
+      currentId = parseInt(rawText || "0", 10) || 0
+    }
+    return currentId
+  }
+
+  // Helper function to handle value changes
+  const handleValueChange = (value: string, onBatch: (updates: Array<{ index: number; newText: string }>) => void, paramIndex: number = 0) => {
+    const idx = parseInt(value, 10)
+    const slug = (fieldsMapping as any)[idx]
+    const newText = slug ? `Fields.${slug}` : String(idx)
+    onBatch([{ index: paramIndex, newText }])
+  }
+
+  return {
+    options,
+    entries,
+    getCurrentId,
+    handleValueChange
+  }
+}
+
+function SetFieldEntryByIdUI({
+  ctx,
+  onBatch,
+}: {
+  ctx: CallContext
+  onBatch: (updates: Array<{ index: number; newText: string }>) => void
+}) {
+  const { options, getCurrentId, handleValueChange } = useFieldSelection()
+  const currentId = getCurrentId(ctx.args[0]?.text?.trim() || "")
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs font-medium">
+        {ctx.namespace}.{ctx.method}
+      </div>
+      {ctx.description && <div className="text-[11px] text-muted-foreground">{ctx.description}</div>}
+      <div className="space-y-1">
+        <Label className="text-xs">Location</Label>
+        <Select
+          value={currentId ? String(currentId) : ""}
+          onValueChange={(v) => handleValueChange(v, onBatch, 0)}
+        >
+          <SelectTrigger className="h-7 text-xs">
+            <SelectValue placeholder="Select field" />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((opt) => (
+              <SelectItem key={opt.id} value={String(opt.id)} className="text-xs">
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="text-[11px] text-muted-foreground">You can edit this list in the Locations tab.</div>
+      </div>
+    </div>
+  )
+}
+
 const customUiRegistry: Record<string, CustomRenderer> = {
   // Keys are Namespace.method
   "Point.set_terrain_color": (ctx, onBatch) => colorTriple(ctx, onBatch),
@@ -55,6 +163,7 @@ const customUiRegistry: Record<string, CustomRenderer> = {
   "Entity.set_coords_in_mesh": (ctx, onBatch) => <SetCoordsInMeshUI ctx={ctx} onBatch={onBatch} />,
   "Point.set_coords_in_mesh": (ctx, onBatch) => <SetCoordsInMeshUI ctx={ctx} onBatch={onBatch} />,
   "System.call_function": (ctx, onBatch) => <CallFunctionUI ctx={ctx} onBatch={onBatch} />,
+  "System.set_field_entry_by_id": (ctx, onBatch) => <SetFieldEntryByIdUI ctx={ctx} onBatch={onBatch} />,
 }
 
 function colorTriple(ctx: CallContext, onBatch: (updates: Array<{ index: number; newText: string }>) => void) {
@@ -280,56 +389,10 @@ function EnterFieldUI({
   ctx: CallContext
   onBatch: (updates: Array<{ index: number; newText: string }>) => void
 }) {
-  const [options, setOptions] = useState<Array<{ id: number; fieldId: number; label: string }>>([])
-  const [nameByFieldId, setNameByFieldId] = useState<Record<number, string>>({})
-  const { entries, loadLocations } = useLocationsState()
-
-  // Ensure we have scene labels and locations loaded
-  useEffect(() => {
-    let mounted = true
-    loadFieldOptions().then(({ byId }) => {
-      if (mounted) setNameByFieldId(byId)
-    })
-    if (!entries || entries.length === 0) {
-      loadLocations()
-    }
-    return () => {
-      mounted = false
-    }
-  }, [entries?.length, loadLocations])
-
-  // Recompute dropdown options when entries or scenario changes
-  useEffect(() => {
-    const scenario = parseInt(ctx.args[1]?.text || "0", 10) || 0
-    if (!entries || entries.length === 0) {
-      setOptions([])
-      return
-    }
-    const opts: Array<{ id: number; fieldId: number; label: string }> = entries.map((entry, idx) => {
-      const fieldId = scenario === 1 ? entry.alternative.fieldId : entry.default.fieldId
-      const sceneLabel = nameByFieldId[fieldId] ?? String(fieldId)
-      return { id: idx + 1, fieldId, label: `${idx + 1} - ${sceneLabel}` }
-    })
-    setOptions(opts)
-  }, [entries, ctx.args[1]?.text, nameByFieldId])
-  // Determine current selection: support Fields.slug or numeric index
-  // scenario is included in deps above; compute but don't store local var to avoid stale usage warnings
-  const raw = ctx.args[0]?.text?.trim() || ""
-  let currentId = 0
-  const fieldsSlugMatch = raw.match(/^Fields\.([A-Za-z0-9_]+)$/i)
-  if (fieldsSlugMatch && entries && entries.length > 0) {
-    const slug = fieldsSlugMatch[1]
-    // Build reverse map slug -> location index (as defined in fieldsMapping)
-    const slugToLocIndex: Record<string, number> = {}
-    Object.entries(fieldsMapping).forEach(([locIndex, s]) => {
-      slugToLocIndex[s] = Number(locIndex)
-    })
-    const wantedIndex = slugToLocIndex[slug]
-    currentId = wantedIndex && wantedIndex >= 1 && wantedIndex <= (entries?.length ?? 0) ? wantedIndex : 0
-  } else {
-    currentId = parseInt(raw || "0", 10) || 0
-  }
   const currentScenario = parseInt(ctx.args[1]?.text || "0", 10) || 0
+  const { options, getCurrentId, handleValueChange } = useFieldSelection(currentScenario)
+  const currentId = getCurrentId(ctx.args[0]?.text?.trim() || "")
+
   return (
     <div className="space-y-3">
       <div className="text-xs font-medium">
@@ -340,12 +403,7 @@ function EnterFieldUI({
         <Label className="text-xs">Location</Label>
         <Select
           value={currentId ? String(currentId) : ""}
-          onValueChange={(v) => {
-            const idx = parseInt(v, 10)
-            const slug = (fieldsMapping as any)[idx]
-            const newText = slug ? `Fields.${slug}` : String(idx)
-            onBatch([{ index: 0, newText }])
-          }}
+          onValueChange={(v) => handleValueChange(v, onBatch, 0)}
         >
           <SelectTrigger className="h-7 text-xs">
             <SelectValue placeholder="Select field" />

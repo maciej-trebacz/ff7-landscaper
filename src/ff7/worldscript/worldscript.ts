@@ -564,7 +564,7 @@ export class Worldscript {
         const property = callee.property as IdentifierExpression;
 
         // For enter_field calls, use fieldsMapping
-        if (property.name === 'enter_field' && argIndex === 0) {
+        if (['enter_field', 'set_field_entry_by_id'].includes(property.name) && argIndex === 0) {
           const value = (node as LiteralExpression).value;
           if (typeof value === 'number' && fieldsMapping[value]) {
             return `Fields.${fieldsMapping[value]}`;

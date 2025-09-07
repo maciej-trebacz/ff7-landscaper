@@ -95,7 +95,7 @@
           "HIDE_MODEL",
           "SET_VERT_SPEED2",
           "FADE_OUT",
-          "SET_FIELD_ENTRY",
+          "EXIT_UNDERWATER",
           "SET_FIELD_ENTRY_ID",
           "PLAY_MUSIC",
           "MOVE_TO_MODEL",
