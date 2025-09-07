@@ -1,16 +1,19 @@
 # Landscaper - FF7 Worldmap Editor
 
+## Current features
+
+* World map text dialogues
+
 ## TODO
 
 * [ ] in system_13 there's a wrong type coercion (2nd param is angle offset, not model id):
 * [ ] Entity.rotate_to_model(Entities.wild_chocobo, Entities.cloud) also this should use the direction component
-* [ ] Export mode is broken
+* [ ] Export mode - it should always reset the camera roll/pitch and show the map grid
+* [ ] Export mode - exporting underwater and glacier maps results in messed up textures (tries to use overworld textures)
+* [ ] Import with normals - missing texture data
 * [ ] Add "Open Script" button next to Script ID in the Triangle sidebar
-* [ ] System.call_function has wrong sidebar ui
-* [ ] System.set_field_entry_by_id(51) in chocobo_29 model script - wrong opcode?
-  * Another example in system_27
-* [ ] System.fade_out and fade_in has unknown 2nd parameter
-* [ ] Entity.set_vertical_speed - has "unknown" parameter
+* [ ] "Go to script" button for messages
+* [ ] Text preview & autosizing for messages
 
 Map
 * [ ] changes are lost when changing current map, switching to a different tab or changing Alternatives
@@ -28,3 +31,10 @@ Scripts
 * [ ] Search feature in the script editor
 * [ ] Search across all scripts
 * [ ] Custom mapping for Entities and Fields namespaces
+* [ ] Can't properly set script alias - the dropdown disappears when you enable an alias
+* [x] System.call_function has wrong sidebar ui
+* [ ] System.set_field_entry_by_id(51) in chocobo_29 model script - wrong opcode?
+  * Another example in system_27
+* [ ] System.fade_out and fade_in has unknown 2nd parameter
+* [ ] Entity.set_vertical_speed - has "unknown" parameter
+* [ ] Verify Special.current_entity_model_id since code @ 0x7674e4 suggests something it's a different value

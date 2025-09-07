@@ -1,7 +1,6 @@
 import { Triangle } from "@/ff7/mapfile";
-import { useAppState } from "@/hooks/useAppState";
+import { TriangleWithVertices } from "@/components/map/types";
 import { MapType, MapMode, useMapState } from "@/hooks/useMapState";
-import { useStatusBar } from "@/hooks/useStatusBar";
 import { useEffect, useState } from "react";
 import MapViewer from "../map/MapViewer";
 import { SelectionSidebar } from "@/components/map/components/SelectionSidebar";
@@ -19,43 +18,15 @@ const MAP_ID_BY_TYPE: Record<MapType, MapId> = {
 };
 
 export function MapTab() {
-  const { loadMap, loadTextures, textures, worldmap, mapType: currentMapType, mode, setMode, enabledAlternatives, setEnabledAlternatives } = useMapState();
-  const { opened, openedTime } = useAppState();
-  const { setMessage, setMapInfo } = useStatusBar();
+  const { textures, worldmap, mapType: currentMapType, mode, setMode, enabledAlternatives, setEnabledAlternatives, loaded, setMapType } = useMapState();
 
-  const [selectedTriangle, setSelectedTriangle] = useState<Triangle | null>(null);
+  const [selectedTriangle, setSelectedTriangle] = useState<TriangleWithVertices | null>(null);
   const [renderingMode, setRenderingMode] = useState<RenderingMode>("terrain");
-  const [isLoading, setIsLoading] = useState(false);
   const [showWireframe, setShowWireframe] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [showNormals, setShowNormals] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      if (!opened) return;
-      try {
-        setIsLoading(true);
-        setSelectedTriangle(null); // Reset selected triangle
-        setMapInfo(currentMapType, null); // Show loading state
-        
-        console.log('[MapTab] Loading map and textures for', currentMapType);
-        await loadTextures(currentMapType);
-        await loadMap(MAP_ID_BY_TYPE[currentMapType], currentMapType);
-        
-        // Update status with map info
-        if (worldmap) {
-          setMapInfo(currentMapType, { length: worldmap.length, width: worldmap[0]?.length });
-        }
-      } catch (error) {
-        setMessage(error as string, true);
-      } finally {
-        console.log('[MapTab] Loading complete');
-        setIsLoading(false);
-      }
-    }
-
-    load();
-  }, [opened, openedTime, currentMapType]);
+  // Map loading is centralized in Navbar. We only respond to selection here.
 
   useEffect(() => {
     if (selectedTriangle) {
@@ -65,6 +36,15 @@ export function MapTab() {
     }
   }, [selectedTriangle]);
 
+  // If not loaded by the centralized loader yet, show a lightweight message
+  if (!loaded) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+        Loading map...
+      </div>
+    )
+  }
+
   const handleVertexChange = (vertexIndex: number, axis: 'x' | 'y' | 'z', value: string) => {
     if (!selectedTriangle) return;
     const newValue = parseInt(value);
@@ -73,9 +53,9 @@ export function MapTab() {
     // Create a deep copy of the selected triangle
     const updatedTriangle = { ...selectedTriangle };
     const targetVertex = `vertex${vertexIndex}` as 'vertex0' | 'vertex1' | 'vertex2';
-    updatedTriangle[targetVertex] = { 
+    updatedTriangle[targetVertex] = {
       ...updatedTriangle[targetVertex],
-      [axis]: newValue 
+      [axis]: newValue
     };
 
     // Update the vertices array for the 3D update
@@ -106,17 +86,16 @@ export function MapTab() {
     <GridSelectionProvider>
       <div className="flex h-full w-full">
         <div className="flex-1">
-          <MapViewer 
-            renderingMode={renderingMode} 
+          <MapViewer
+            renderingMode={renderingMode}
             showGrid={showGrid}
             onTriangleSelect={mode === 'selection' ? setSelectedTriangle : undefined}
-            isLoading={isLoading}
             cameraType={mode === 'export' ? 'orthographic' : 'perspective'}
             wireframe={showWireframe}
             onWireframeToggle={setShowWireframe}
             onGridToggle={setShowGrid}
             onRenderingModeChange={setRenderingMode}
-            onMapTypeChange={(type: MapType) => loadMap(MAP_ID_BY_TYPE[type], type)}
+            onMapTypeChange={(type: MapType) => setMapType(type)}
             onModeChange={handleModeChange}
             enabledAlternatives={enabledAlternatives}
             onAlternativesChange={setEnabledAlternatives}

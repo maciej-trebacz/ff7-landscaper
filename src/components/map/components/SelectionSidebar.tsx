@@ -1,8 +1,9 @@
 import { Triangle } from "@/ff7/mapfile";
+import { TriangleWithVertices } from "@/components/map/types";
 import { SelectedTriangle } from "./SelectedTriangle";
 
 interface SelectionSidebarProps {
-  selectedTriangle: Triangle | null;
+  selectedTriangle: TriangleWithVertices | null;
   textures: any[];
   onVertexChange: (vertexIndex: number, axis: 'x' | 'y' | 'z', value: string) => void;
 }

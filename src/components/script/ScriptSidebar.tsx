@@ -887,26 +887,7 @@ function SetCoordsInMeshUI({
   }, [editorHandle, ctx.row])
 
   // Draw terrain preview for the selected mesh using simple colors
-  const { worldmap, mapType, textures, loadMap, loadTextures } = useMapState()
-  const initializedRef = useRef(false)
-  useEffect(() => {
-    if (initializedRef.current) return
-    initializedRef.current = true
-    ;(async () => {
-      const MAP_ID_BY_TYPE: Record<"overworld" | "underwater" | "glacier", "WM0" | "WM2" | "WM3"> = {
-        overworld: "WM0",
-        underwater: "WM2",
-        glacier: "WM3",
-      }
-      if (!textures || textures.length === 0) {
-        await loadTextures(mapType)
-      }
-      if (!worldmap) {
-        await loadMap(MAP_ID_BY_TYPE[mapType], mapType)
-      }
-    })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const { worldmap, mapType } = useMapState()
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !worldmap) return

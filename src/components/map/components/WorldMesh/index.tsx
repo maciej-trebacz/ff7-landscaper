@@ -6,6 +6,7 @@ import { useGeometry } from './hooks';
 import { useSelectedTriangleGeometry } from './hooks';
 import { RenderingMode } from '../../types';
 import { Triangle } from '@/ff7/mapfile';
+import { TriangleWithVertices } from '@/components/map/types';
 import { MapMode, useMapState } from '@/hooks/useMapState';
 import { MESH_SIZE } from '../../constants';
 import { GridOverlay } from '../GridOverlay';
@@ -13,7 +14,7 @@ import { SELECTION_Y_OFFSET } from '../../constants';
 
 interface WorldMeshProps {
   renderingMode: RenderingMode;
-  onTriangleSelect: (triangle: Triangle | null, faceIndex: number | null) => void;
+  onTriangleSelect: (triangle: TriangleWithVertices | null, faceIndex: number | null) => void;
   selectedFaceIndex: number | null;
   debugCanvasRef: React.RefObject<HTMLCanvasElement>;
   mapCenter: { x: number; y: number; z: number };
@@ -56,8 +57,6 @@ export function WorldMesh({
   const selectedTriangleGeometry = useSelectedTriangleGeometry(triangleMap, selectedFaceIndex);
 
   const selectedTriangle = triangleMap?.[selectedFaceIndex];
-
-  // cleaned debug effect
 
   // Update triangleMap in global state whenever it changes
   useEffect(() => {

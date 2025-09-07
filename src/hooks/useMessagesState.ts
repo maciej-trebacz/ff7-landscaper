@@ -8,10 +8,12 @@ import { useLgpState } from './useLgpState'
 
 interface MessagesState {
   messages: string[]
+  loaded: boolean
 }
 
 const messagesStateAtom = atom<MessagesState>({
-  messages: []
+  messages: [],
+  loaded: false
 })
 
 export function useMessagesState() {
@@ -52,7 +54,8 @@ export function useMessagesState() {
       const mesFile = new MesFile(mesData)
       setState(prev => ({
         ...prev,
-        messages: mesFile.data.messages.map(msg => msg.text)
+        messages: mesFile.data.messages.map(msg => msg.text),
+        loaded: true
       }))
     } catch (error) {
       console.error("Error loading messages:", error)
@@ -111,8 +114,9 @@ export function useMessagesState() {
 
   return {
     messages: state.messages,
+    loaded: state.loaded,
     loadMessages,
     saveMessages,
     updateMessage
   }
-} 
+}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Stats, PerspectiveCamera, OrthographicCamera } from '@react-three/drei';
 import { Triangle } from '@/ff7/mapfile';
+import { TriangleWithVertices } from '@/components/map/types';
 import { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { PerspectiveCamera as ThreePerspectiveCamera, OrthographicCamera as ThreeOrthographicCamera, Vector3 } from 'three';
 import { RenderingMode } from './types';
@@ -87,7 +88,7 @@ function MapViewer({
     }
   }, [onTriangleSelect]);
 
-  const handleTriangleSelect = (triangle: Triangle | null, faceIndex: number | null) => {
+  const handleTriangleSelect = (triangle: TriangleWithVertices | null, faceIndex: number | null) => {
     if (onTriangleSelect) {
       setSelectedFaceIndex(faceIndex);
       setSelectedTriangle(faceIndex);

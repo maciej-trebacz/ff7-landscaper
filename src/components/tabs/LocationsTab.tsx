@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { useLgpState } from '@/hooks/useLgpState'
 import { useLocationsState } from '@/hooks/useLocationsState'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -35,8 +34,7 @@ function NumberInput({
 // ScenarioEditor removed in favor of a single table layout
 
 export function LocationsTab() {
-  const { opened, openedTime } = useLgpState()
-  const { entries, loadLocations, updateEntry } = useLocationsState()
+  const { entries, loaded, updateEntry } = useLocationsState()
 
   const [fieldOptions, setFieldOptions] = useState<Array<{ id: number; label: string }>>([])
   const [labelById, setLabelById] = useState<Record<number, string>>({})
@@ -140,13 +138,14 @@ export function LocationsTab() {
     )
   }
 
-  useEffect(() => {
-    async function load() {
-      if (!opened) return
-      await loadLocations()
-    }
-    load()
-  }, [opened, openedTime])
+
+  if (!loaded) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+        Loading locations...
+      </div>
+    )
+  }
 
   return (
     <div className="flex-1 flex flex-col min-h-0">

@@ -24,6 +24,7 @@ interface ScriptsState {
   decompiledScripts: Record<string, string> // Map of script keys to decompiled content
   scriptHistory: SelectedScript[] // History of opened scripts for back/forward navigation
   currentHistoryIndex: number // Current position in history (-1 means no history)
+  loaded: boolean
 }
 
 const scriptsStateAtom = atom<ScriptsState>({
@@ -36,6 +37,7 @@ const scriptsStateAtom = atom<ScriptsState>({
   decompiledScripts: {},
   scriptHistory: [],
   currentHistoryIndex: -1,
+  loaded: false,
 })
 
 export function useScriptsState() {
@@ -43,7 +45,7 @@ export function useScriptsState() {
   const { setMessage } = useStatusBar()
   const { getFile, setFile } = useLgpState()
 
-  const loadScripts = async (mapId?: MapId) => {
+  const loadScripts = async (mapId?: MapId): Promise<FF7Function[] | undefined> => {
     try {
       // Clear existing scripts first
       setState((prev) => ({
@@ -62,7 +64,7 @@ export function useScriptsState() {
       const evData = await getFile(targetMap.toLowerCase() + ".ev")
       if (!evData) {
         console.error("Failed to read ev file")
-        return
+        return undefined
       }
 
       console.debug("[Scripts] Parsing ev file")
@@ -72,12 +74,15 @@ export function useScriptsState() {
         ...prev,
         functions: evFile.functions,
         ev: evFile,
+        loaded: true,
       }))
 
       console.debug("[Scripts] Scripts loaded", evFile.functions)
+      return evFile.functions
     } catch (error) {
       console.error("Error loading scripts:", error)
       setMessage("Failed to load scripts: " + (error as Error).message, true)
+      return undefined
     }
   }
 
@@ -431,6 +436,7 @@ export function useScriptsState() {
     selectedScript: state.selectedScript,
     ev: state.ev,
     decompiled: state.decompiled,
+    loaded: state.loaded,
     loadScripts,
     saveScripts,
     addModelScript,

@@ -14,30 +14,9 @@ type MapPickerProps = {
 }
 
 export function MapPicker({ onPickCell, mapType: preferredMapType, preselect }: MapPickerProps) {
-  const { mapType, worldmap, textures, loadTextures, loadMap } = useMapState()
+  const { mapType, worldmap } = useMapState()
 
   const effectiveType = preferredMapType ?? mapType
-  const initializedRef = useRef(false)
-
-  // Ensure map data is loaded exactly once
-  useEffect(() => {
-    if (initializedRef.current) return
-    initializedRef.current = true
-    const MAP_ID_BY_TYPE: Record<MapType, 'WM0' | 'WM2' | 'WM3'> = {
-      overworld: 'WM0',
-      underwater: 'WM2',
-      glacier: 'WM3',
-    }
-    ;(async () => {
-      if (!textures || textures.length === 0) {
-        await loadTextures(effectiveType)
-      }
-      if (!worldmap) {
-        await loadMap(MAP_ID_BY_TYPE[effectiveType], effectiveType)
-      }
-    })()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const mapDimensions = useMemo(() => {
     const info = dimensions[effectiveType]

@@ -1,8 +1,8 @@
 import { useMapState } from "@/hooks/useMapState"
+import { useAppState } from "@/hooks/useAppState"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card } from "@/components/ui/card"
-import { useEffect, useMemo, useState } from "react"
-import { useAppState } from "@/hooks/useAppState"
+import { useMemo } from "react"
 import {
     Select,
     SelectContent,
@@ -31,26 +31,15 @@ function createImageFromTexture(pixels: Uint8Array, width: number, height: numbe
 }
 
 export function TexturesTab() {
-    const { textures, loadTextures } = useMapState()
-    const { opened, openedTime } = useAppState()
-    const [mapType, setMapType] = useState<MapType>("overworld")
-    const [isLoading, setIsLoading] = useState(false)
+    const { textures, loadedTextures, mapType, setMapType } = useMapState()
+    const { currentTab } = useAppState()
 
-    useEffect(() => {
-        async function load() {
-            if (!opened) return
-            setIsLoading(true)
-            try {
-                await loadTextures(mapType)
-            } finally {
-                setIsLoading(false)
-            }
-        }
-        load()
-    }, [opened, openedTime, mapType])
+    const isActive = currentTab === 'textures'
+    const texturesLoaded = loadedTextures[mapType]
 
     const textureImages = useMemo(() => {
-        if (isLoading) return []
+        if (!isActive) return []
+
         return textures.map(texture => {
             if (!texture.tex) return null
             console.log(`[Textures] Creating image for ${texture.name}`, texture)
@@ -63,7 +52,16 @@ export function TexturesTab() {
                 )
             }
         })
-    }, [textures, isLoading])
+    }, [textures, isActive])
+
+    // Show loading message if tab is active but textures aren't loaded yet
+    if (isActive && !texturesLoaded) {
+        return (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                Loading textures...
+            </div>
+        )
+    }
 
     return (
         <ScrollArea className="h-full">
@@ -81,11 +79,6 @@ export function TexturesTab() {
                             </SelectContent>
                         </Select>
                 </div>
-                {isLoading ? (
-                    <div className="flex items-center justify-center h-[calc(100vh-12rem)] text-muted-foreground">
-                        Loading textures...
-                    </div>
-                ) : (
                     <div className="grid grid-cols-4 gap-4">
                         {textureImages.map(texture => {
                             if (!texture) return null
@@ -115,7 +108,6 @@ export function TexturesTab() {
                             )
                         })}
                     </div>
-                )}
             </div>
         </ScrollArea>
     )

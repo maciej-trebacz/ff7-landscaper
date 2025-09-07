@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { FF7Function, FunctionType } from "@/ff7/evfile"
 import { modelsMapping, systemScriptNames, modelScriptNames } from "@/ff7/worldscript/constants"
 import { Plus } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { AddScriptModal } from "@/components/modals/AddScriptModal"
 
 interface ScriptListProps {
@@ -48,8 +48,9 @@ function hasShortName(script: FF7Function): boolean {
 }
 
 export function ScriptList({ className }: ScriptListProps) {
-  const { functions, scriptType, selectScript, isScriptSelected, addModelScript, addMeshScript } = useScriptsState()
+  const { functions, scriptType, selectScript, isScriptSelected, addModelScript, addMeshScript, selectedScript } = useScriptsState()
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const selectedItemRef = useRef<HTMLButtonElement | null>(null)
 
   // Filter and sort scripts
   const filteredScripts = functions
@@ -82,6 +83,15 @@ export function ScriptList({ className }: ScriptListProps) {
           return 0
       }
     })
+
+  useEffect(() => {
+    const el = selectedItemRef.current
+    if (el) {
+      try {
+        el.scrollIntoView({ block: "nearest" })
+      } catch {}
+    }
+  }, [selectedScript, scriptType, filteredScripts.length])
 
   const handleAddScript = async (params: any) => {
     try {
@@ -116,6 +126,7 @@ export function ScriptList({ className }: ScriptListProps) {
               key={getScriptKey(script)}
               variant={isScriptSelected(script) ? "secondary" : "ghost"}
               className="w-full justify-start h-7 text-xs px-2"
+              ref={isScriptSelected(script) ? selectedItemRef : undefined}
               onClick={() => selectScript(script)}
             >
               <div className="flex items-center justify-between w-full">

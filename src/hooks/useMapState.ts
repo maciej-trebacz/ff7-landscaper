@@ -30,11 +30,13 @@ interface MapState {
   map: MapFile | null
   worldmap: Mesh[][] | null
   textures: WorldMapTexture[]
+  loadedTextures: Record<MapType, boolean>
   enabledAlternatives: number[]
   changedMeshes: [number, number][]
   paintingSelectedTriangles: Set<number>
   triangleMap: TriangleWithVertices[] | null
   selectedTriangle: number | null
+  loaded: boolean
   updateColors?: () => void
   updateTriangleTexture?: (triangle: TriangleWithVertices) => void
   updateTriangleNormals?: (triangle: TriangleWithVertices, normal0: { x: number; y: number; z: number }, normal1: { x: number; y: number; z: number }, normal2: { x: number; y: number; z: number }) => void
@@ -47,11 +49,17 @@ const mapStateAtom = atom<MapState>({
   map: null,
   worldmap: null,
   textures: [],
+  loadedTextures: {
+    overworld: false,
+    underwater: false,
+    glacier: false,
+  },
   enabledAlternatives: [],
   changedMeshes: [],
   paintingSelectedTriangles: new Set<number>(),
   triangleMap: null,
   selectedTriangle: null,
+  loaded: false,
   updateColors: undefined,
   updateTriangleTexture: undefined,
 })
@@ -136,7 +144,12 @@ export function useMapState() {
     await Promise.all(loadPromises);
     console.log(`[Map] Loaded ${textures.filter(t => t.tex !== null).length}/${textures.length} textures`)
 
-    setState(prev => ({ ...prev, textures, mapType }))
+    setState(prev => ({
+      ...prev,
+      textures,
+      mapType,
+      loadedTextures: { ...prev.loadedTextures, [mapType]: true }
+    }))
     return textures
   }
 
@@ -155,7 +168,7 @@ export function useMapState() {
 
     console.debug("[Map] Worldmap data", worldmapData)
 
-    setState(prev => ({ ...prev, mapId, mapType, map: mapData, worldmap: worldmapData }))
+    setState(prev => ({ ...prev, mapId, mapType, map: mapData, worldmap: worldmapData, loaded: true }))
     return mapData
   }
 
@@ -165,6 +178,21 @@ export function useMapState() {
       return { ...prev, enabledAlternatives: alternatives, worldmap: worldmapData };
     });
   }
+
+  // Centralized map type setter; does not load by itself
+  const setMapType = useCallback((mapType: MapType) => {
+    setState(prev => ({
+      ...prev,
+      mapType,
+      // Clear current world data so UI knows to wait for Navbar to load
+      worldmap: null,
+      triangleMap: null,
+      selectedTriangle: null,
+      changedMeshes: [],
+      textures: [],
+      loaded: false,
+    }))
+  }, [setState])
 
   const addChangedMesh = useCallback((row: number, col: number) => {
     setState(prev => {
@@ -402,13 +430,16 @@ export function useMapState() {
     map: state.map,
     worldmap: state.worldmap,
     textures: state.textures,
+    loadedTextures: state.loadedTextures,
     enabledAlternatives: state.enabledAlternatives,
     triangleMap: state.triangleMap,
     selectedTriangle: state.selectedTriangle,
+    loaded: state.loaded,
     loadMap,
     saveMap,
     loadTextures,
     setEnabledAlternatives,
+    setMapType,
     addChangedMesh,
     setMode,
     togglePaintingSelectedTriangle,
@@ -420,4 +451,4 @@ export function useMapState() {
     updateSectionMesh,
     setSelectedTriangle
   }
-} 
+}

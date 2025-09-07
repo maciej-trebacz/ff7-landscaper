@@ -19,11 +19,13 @@ export interface FieldEntryRecord {
 interface LocationsState {
   entries: FieldEntryRecord[]
   file: FieldTblFile | null
+  loaded: boolean
 }
 
 const locationsStateAtom = atom<LocationsState>({
   entries: [],
   file: null,
+  loaded: false,
 })
 
 export function useLocationsState() {
@@ -33,12 +35,13 @@ export function useLocationsState() {
 
   const loadLocations = async () => {
     try {
+      console.log('Loading locations...')
       const data = await getFile('field.tbl')
       if (!data) {
         throw new Error('Failed to read field.tbl')
       }
       const file = new FieldTblFile(data)
-      setState({ entries: file.data.entries, file })
+      setState({ entries: file.data.entries, file, loaded: true })
     } catch (error) {
       console.error('[Locations] Failed to load field.tbl', error)
       setMessage('Failed to load locations: ' + (error as Error).message, true)
@@ -105,6 +108,7 @@ export function useLocationsState() {
 
   return {
     entries: state.entries,
+    loaded: state.loaded,
     loadLocations,
     saveLocations,
     updateEntry,

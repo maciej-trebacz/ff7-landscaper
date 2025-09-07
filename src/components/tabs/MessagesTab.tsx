@@ -1,27 +1,17 @@
-import { useEffect } from "react"
-import { useMessagesState } from "@/hooks/useMessagesState"
-import { useLgpState } from "@/hooks/useLgpState"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { MessageRow } from "./MessageRow"
-import { useStatusBar } from "@/hooks/useStatusBar"
+import { useMessagesState } from "@/hooks/useMessagesState"
 
 export function MessagesTab() {
-  const { messages, loadMessages, updateMessage } = useMessagesState()
-  const { opened, openedTime } = useLgpState()
-  const { setMessage } = useStatusBar()
+  const { messages, loaded, updateMessage } = useMessagesState()
 
-  useEffect(() => {
-    async function load() {
-      if (!opened) return
-      try {
-        await loadMessages()
-      } catch (error) {
-        setMessage(error as string, true)
-      }
-    }
-
-    load()
-  }, [opened, openedTime])
+  if (!loaded) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+        Loading messages...
+      </div>
+    )
+  }
 
   return (
     <ScrollArea className="h-full w-full">
@@ -37,4 +27,4 @@ export function MessagesTab() {
       </div>
     </ScrollArea>
   )
-} 
+}

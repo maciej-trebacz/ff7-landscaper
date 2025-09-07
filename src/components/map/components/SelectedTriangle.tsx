@@ -1,10 +1,9 @@
-import { Triangle } from "@/ff7/mapfile";
+import { TriangleWithVertices } from "@/components/map/types";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { TRIANGLE_TYPES } from "@/lib/map-data";
 import { UVEditor } from "@/components/map/components/UVEditor";
 import { useMessagesState } from "@/hooks/useMessagesState";
-import { useMapState } from "@/hooks/useMapState";
 import {
   Select,
   SelectContent,
@@ -13,16 +12,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { useAppState } from "@/hooks/useAppState";
+import { useScriptsState } from "@/hooks/useScriptState";
+import { useMapState, MapType, MapId } from "@/hooks/useMapState";
+import { FunctionType } from "@/ff7/evfile";
+import { MESH_SIZE } from "@/components/map/constants";
+
+const MAP_ID_BY_TYPE: Record<MapType, MapId> = {
+  overworld: "WM0",
+  underwater: "WM2",
+  glacier: "WM3"
+};
 
 interface SelectedTriangleProps {
-  triangle: Triangle | null;
+  triangle: TriangleWithVertices | null;
   textures: any[];
   onVertexChange: (vertexIndex: number, axis: 'x' | 'y' | 'z', value: string) => void;
 }
 
 export function SelectedTriangle({ triangle, textures, onVertexChange }: SelectedTriangleProps) {
   const { messages } = useMessagesState();
-  const { updateSingleTriangle } = useMapState();
+  const { updateSingleTriangle, mapType } = useMapState();
+  const { setCurrentTab } = useAppState();
+  const { setScriptType, selectScript, functions, setSelectedMap, loadScripts } = useScriptsState();
 
   if (!triangle) {
     return (
@@ -34,6 +47,41 @@ export function SelectedTriangle({ triangle, textures, onVertexChange }: Selecte
 
   const handlePropertyChange = (updates: any) => {
     updateSingleTriangle(updates);
+  };
+
+  const handleJumpToScript = async () => {
+    if (!triangle) return;
+
+    // Calculate mesh coordinates
+    const row = Math.floor(triangle.meshOffsetZ / MESH_SIZE);
+    const col = Math.floor(triangle.meshOffsetX / MESH_SIZE);
+    const scriptId = triangle.script - 3;
+
+    // Switch to Scripts tab
+    setCurrentTab("scripts");
+
+    // Set the script map to match the current map type
+    const targetMapId = MAP_ID_BY_TYPE[mapType];
+    setSelectedMap(targetMapId);
+
+    // Set script type to Mesh
+    setScriptType(FunctionType.Mesh);
+
+    // Reload scripts for the selected map to ensure list is fresh
+    const loaded = await loadScripts(targetMapId);
+    const list = loaded ?? functions;
+
+    // Find the mesh script with matching coordinates and ID
+    const targetScript = list.find(script =>
+      script.type === FunctionType.Mesh &&
+      script.x === row &&
+      script.y === col &&
+      script.id === scriptId
+    );
+
+    if (targetScript) {
+      selectScript(targetScript);
+    }
   };
 
   return (
@@ -63,14 +111,24 @@ export function SelectedTriangle({ triangle, textures, onVertexChange }: Selecte
 
             <div className="flex items-center justify-between space-x-2">
               <Label className="text-xs w-16 shrink-0">Script ID</Label>
-              <Input
-                type="number"
-                className="h-6 text-xs"
-                min={0}
-                max={255}
-                value={triangle.script}
-                onChange={(e) => handlePropertyChange({ script: parseInt(e.target.value) })}
-              />
+              <div className="flex items-center space-x-1">
+                <Input
+                  type="number"
+                  className="h-6 text-xs"
+                  min={0}
+                  max={255}
+                  value={triangle.script}
+                  onChange={(e) => handlePropertyChange({ script: parseInt(e.target.value) })}
+                />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-6 px-2 text-xs"
+                  onClick={handleJumpToScript}
+                >
+                  Jump to script
+                </Button>
+              </div>
             </div>
 
             <div className="flex items-center justify-between space-x-2">

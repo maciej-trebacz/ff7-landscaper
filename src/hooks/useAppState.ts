@@ -7,6 +7,9 @@ interface AppState {
   opened: boolean
   openedTime: number
   connected: boolean
+  loading: boolean
+  loadingStep: string
+  currentTab: string
   alert: {
     show: boolean
     title: string
@@ -19,6 +22,9 @@ const appStateAtom = atom<AppState>({
   opened: false,
   openedTime: 0,
   connected: false,
+  loading: false,
+  loadingStep: '',
+  currentTab: 'messages',
   alert: {
     show: false,
     title: '',
@@ -36,6 +42,18 @@ export function useAppState() {
       opened: true,
       openedTime: Date.now()
     }))
+  }
+
+  const setLoading = (loading: boolean) => {
+    setState(prev => ({ ...prev, loading, loadingStep: loading ? prev.loadingStep : '' }))
+  }
+
+  const setCurrentTab = (tab: string) => {
+    setState(prev => ({ ...prev, currentTab: tab }))
+  }
+
+  const setLoadingStep = (step: string) => {
+    setState(prev => ({ ...prev, loading: true, loadingStep: step }))
   }
 
   const showAlert = (title: string, message: string) => {
@@ -73,17 +91,20 @@ export function useAppState() {
   useEffect(() => {
     // Check connection immediately
     checkConnection()
-    
+
     // Then check every 2 seconds
     const interval = setInterval(checkConnection, 2000)
-    
+
     return () => clearInterval(interval)
   }, [])
 
   return {
     ...state,
     setDataPath,
+    setLoading,
+    setLoadingStep,
+    setCurrentTab,
     showAlert,
     hideAlert
   }
-} 
+}

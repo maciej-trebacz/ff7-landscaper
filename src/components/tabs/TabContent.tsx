@@ -5,15 +5,23 @@ import { EncountersTab } from "./EncountersTab"
 import { ScriptsTab } from "./ScriptsTab"
 import { TexturesTab } from "./TexturesTab"
 import { LocationsTab } from "./LocationsTab"
-import { useLgpState } from "@/hooks/useLgpState"
+import { useAppState } from "@/hooks/useAppState"
 
 export function TabContent() {
-  const { opened } = useLgpState()
+  const { opened, loading } = useAppState()
 
   if (!opened) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground">
         Please open Final Fantasy VII game directory to start
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+        Loading game data...
       </div>
     )
   }
@@ -26,7 +34,7 @@ export function TabContent() {
       <TabsContent value="messages" className="flex-1 data-[state=active]:flex overflow-y-auto">
         <MessagesTab />
       </TabsContent>
-      <TabsContent value="encounters" className="flex-1 data-[state=active]:flex">
+      <TabsContent value="encounters" className="flex-1 data-[state=active]:flex min-h-0">
         <EncountersTab />
       </TabsContent>
       <TabsContent value="scripts" className="flex-1 data-[state=active]:flex min-h-0">
@@ -40,4 +48,4 @@ export function TabContent() {
       </TabsContent>
     </div>
   )
-} 
+}

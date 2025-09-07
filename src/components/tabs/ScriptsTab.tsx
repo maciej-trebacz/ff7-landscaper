@@ -1,34 +1,24 @@
-import { useEffect } from "react"
-import { useLgpState } from "@/hooks/useLgpState"
-import { useStatusBar } from "@/hooks/useStatusBar"
-import { useScriptsState } from "@/hooks/useScriptState"
+import { useRef, useState } from "react"
 import { ScriptControls } from "@/components/script/ScriptControls"
 import { ScriptList } from "@/components/script/ScriptList"
 import { ScriptEditor } from "@/components/script/ScriptEditor"
 import { ScriptSidebar } from "@/components/script/ScriptSidebar"
-import { useRef, useState } from "react"
 import type { CallContext, WorldscriptEditorHandle } from "@/components/script/WorldscriptEditor"
+import { useScriptsState } from "@/hooks/useScriptState"
 
 export function ScriptsTab() {
-  const { loadScripts } = useScriptsState()
-  const { opened, openedTime } = useLgpState()
-  const { setMessage } = useStatusBar()
-
-  useEffect(() => {
-    async function load() {
-      if (!opened) return
-      try {
-        await loadScripts()
-      } catch (error) {
-        setMessage(error as string, true)
-      }
-    }
-
-    load()
-  }, [opened, openedTime])
+  const { loaded } = useScriptsState()
 
   const [context, setContext] = useState<CallContext | null>(null)
   const editorRef = useRef<WorldscriptEditorHandle | null>(null)
+
+  if (!loaded) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+        Loading scripts...
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col w-full min-h-0">
@@ -38,7 +28,7 @@ export function ScriptsTab() {
         <div className="flex-1 overflow-y-auto">
           <ScriptEditor className="h-full" editorHandleRef={editorRef as any} onWorldscriptContextChange={setContext} />
         </div>
-        <ScriptSidebar 
+        <ScriptSidebar
           className="w-[320px] box-content border-l overflow-y-auto"
           context={context}
           editor={editorRef.current}
@@ -48,4 +38,4 @@ export function ScriptsTab() {
       </div>
     </div>
   )
-} 
+}

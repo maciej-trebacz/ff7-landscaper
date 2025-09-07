@@ -39,6 +39,7 @@ export function ScriptEditor({
     isAliasSelected,
     getAliasTargetScript,
     isScriptSelected,
+    selectScript,
   } = useScriptsState()
 
   const [isDecompiling, setIsDecompiling] = useState(false)
@@ -198,7 +199,7 @@ export function ScriptEditor({
           {scriptToEdit && <div className="text-xs text-muted-foreground">{getScriptName()}</div>}
         </div>
 
-        {scriptToEdit && !isAliasSelected() && (
+        {scriptToEdit && (
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <Switch
@@ -211,33 +212,55 @@ export function ScriptEditor({
                 Decompiled
               </Label>
             </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="is-alias"
-                checked={scriptToEdit.aliasId !== undefined}
-                onCheckedChange={handleAliasChange}
-                disabled={!scriptToEdit || systemFunctions.length === 0}
-              />
-              <Label htmlFor="is-alias" className="text-xs">
-                Alias to:
-              </Label>
-            </div>
-            <Select
-              value={scriptToEdit?.aliasId?.toString()}
-              onValueChange={handleAliasSelect}
-              disabled={!scriptToEdit || scriptToEdit.aliasId === undefined}
-            >
-              <SelectTrigger className="h-7 text-xs w-[110px]">
-                <SelectValue placeholder="None" />
-              </SelectTrigger>
-              <SelectContent>
-                {systemFunctions.map((fn) => (
-                  <SelectItem key={fn.id} value={fn.id.toString()} className="text-xs">
-                    System {fn.id}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isAliasSelected() ? (
+              <button
+                onClick={() => {
+                  const targetScript = getAliasTargetScript()
+                  if (targetScript) {
+                    selectScript(targetScript)
+                  }
+                }}
+                className="px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+              >
+                Jump to {(() => {
+                  const target = getAliasTargetScript()
+                  if (!target) return ""
+                  return target.type === FunctionType.System
+                    ? `System ${target.id}`
+                    : `Model ${(target as any).modelId}:${target.id}`
+                })()}
+              </button>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="is-alias"
+                    checked={scriptToEdit.aliasId !== undefined}
+                    onCheckedChange={handleAliasChange}
+                    disabled={!scriptToEdit || systemFunctions.length === 0}
+                  />
+                  <Label htmlFor="is-alias" className="text-xs">
+                    Alias to:
+                  </Label>
+                </div>
+                <Select
+                  value={scriptToEdit?.aliasId?.toString()}
+                  onValueChange={handleAliasSelect}
+                  disabled={!scriptToEdit || scriptToEdit.aliasId === undefined}
+                >
+                  <SelectTrigger className="h-7 text-xs w-[110px]">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {systemFunctions.map((fn) => (
+                      <SelectItem key={fn.id} value={fn.id.toString()} className="text-xs">
+                        System {fn.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
           </div>
         )}
       </div>
