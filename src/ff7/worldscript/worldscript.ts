@@ -580,7 +580,7 @@ export class Worldscript {
 
         // For model related opcodes, use modelOpcodes
         const modelArgument = modelOpcodes.find(opcode => opcode.name === property.name);
-        if (modelArgument) {
+        if (modelArgument && (property.name !== 'rotate_to_model' || argIndex !== 1)) {
           const value = (node as LiteralExpression).value;
           if (typeof value === 'number' && modelsMapping[value]) {
             return `Entities.${modelsMapping[value]}`;

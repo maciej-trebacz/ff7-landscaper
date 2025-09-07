@@ -25,6 +25,7 @@ interface ScriptsState {
   scriptHistory: SelectedScript[] // History of opened scripts for back/forward navigation
   currentHistoryIndex: number // Current position in history (-1 means no history)
   loaded: boolean
+  cursorTarget: { row: number; col: number } | null
 }
 
 const scriptsStateAtom = atom<ScriptsState>({
@@ -38,6 +39,7 @@ const scriptsStateAtom = atom<ScriptsState>({
   scriptHistory: [],
   currentHistoryIndex: -1,
   loaded: false,
+  cursorTarget: null,
 })
 
 export function useScriptsState() {
@@ -59,15 +61,12 @@ export function useScriptsState() {
       }))
 
       const targetMap = mapId || state.selectedMap
-      console.debug("[Scripts] Loading scripts for map", targetMap)
 
       const evData = await getFile(targetMap.toLowerCase() + ".ev")
       if (!evData) {
         console.error("Failed to read ev file")
         return undefined
       }
-
-      console.debug("[Scripts] Parsing ev file")
 
       const evFile = new EvFile(evData)
       setState((prev) => ({
@@ -77,7 +76,6 @@ export function useScriptsState() {
         loaded: true,
       }))
 
-      console.debug("[Scripts] Scripts loaded", evFile.functions)
       return evFile.functions
     } catch (error) {
       console.error("Error loading scripts:", error)
@@ -193,8 +191,6 @@ export function useScriptsState() {
     const currentScript = getSelectedScript()
     if (!currentScript) return
 
-    console.debug("[Scripts] Updating script", currentScript.id, updates)
-
     // Check if we're editing an alias - if so, we need to update the target script
     const isEditingAlias = isAliasSelected()
     const targetScript = isEditingAlias ? getAliasTargetScript() : null
@@ -229,6 +225,46 @@ export function useScriptsState() {
         }
       })
 
+      // Also update the corresponding function in the EvFile
+      if (prev.ev) {
+        const updatedEvFunctions = prev.ev.functions.map((fn) => {
+          // If editing an alias, update the target script; otherwise update the selected script
+          const shouldUpdate = isEditingAlias
+            ? fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id
+            : isScriptSelected(fn)
+
+          if (!shouldUpdate) return fn
+
+          switch (fn.type) {
+            case FunctionType.System:
+              return {
+                ...fn,
+                ...updates,
+              } as SystemFunction
+            case FunctionType.Model:
+              return {
+                ...fn,
+                ...updates,
+              } as ModelFunction
+            case FunctionType.Mesh:
+              return {
+                ...fn,
+                ...updates,
+              } as MeshFunction
+          }
+        })
+
+        // Create a new EvFile with the updated functions
+        const updatedEv = Object.assign(Object.create(Object.getPrototypeOf(prev.ev)), prev.ev)
+        updatedEv.functions = updatedEvFunctions
+
+        return {
+          ...prev,
+          functions: updatedFunctions,
+          ev: updatedEv
+        }
+      }
+
       return {
         ...prev,
         functions: updatedFunctions,
@@ -249,6 +285,14 @@ export function useScriptsState() {
 
   const setDecompiledMode = (enabled: boolean) => {
     setState((prev) => ({ ...prev, decompiled: enabled }))
+  }
+
+  const setCursorTarget = (row: number, col: number = 0) => {
+    setState((prev) => ({ ...prev, cursorTarget: { row, col } }))
+  }
+
+  const clearCursorTarget = () => {
+    setState((prev) => ({ ...prev, cursorTarget: null }))
   }
 
   const getScriptKey = (script: FF7Function): string => {
@@ -366,6 +410,75 @@ export function useScriptsState() {
     }))
   }
 
+  const updateScriptByReference = (scriptToUpdate: FF7Function, updates: Partial<FF7Function>) => {
+    setState((prev) => {
+      const updatedFunctions = prev.functions.map((fn) => {
+        // Match by the same criteria as the script
+        const shouldUpdate = (() => {
+          switch (fn.type) {
+            case FunctionType.System:
+              return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id
+            case FunctionType.Model:
+              return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id && fn.modelId === scriptToUpdate.modelId
+            case FunctionType.Mesh:
+              return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id && fn.x === scriptToUpdate.x && fn.y === scriptToUpdate.y
+          }
+        })()
+
+        if (!shouldUpdate) return fn
+
+        switch (fn.type) {
+          case FunctionType.System:
+            return { ...fn, ...updates } as SystemFunction
+          case FunctionType.Model:
+            return { ...fn, ...updates } as ModelFunction
+          case FunctionType.Mesh:
+            return { ...fn, ...updates } as MeshFunction
+        }
+      })
+
+      // Also update the corresponding function in the EvFile
+      if (prev.ev) {
+        const updatedEvFunctions = prev.ev.functions.map((fn) => {
+          // Match by the same criteria as the script
+          const shouldUpdate = (() => {
+            switch (fn.type) {
+              case FunctionType.System:
+                return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id
+              case FunctionType.Model:
+                return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id && fn.modelId === scriptToUpdate.modelId
+              case FunctionType.Mesh:
+                return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id && fn.x === scriptToUpdate.x && fn.y === scriptToUpdate.y
+            }
+          })()
+
+          if (!shouldUpdate) return fn
+
+          switch (fn.type) {
+            case FunctionType.System:
+              return { ...fn, ...updates } as SystemFunction
+            case FunctionType.Model:
+              return { ...fn, ...updates } as ModelFunction
+            case FunctionType.Mesh:
+              return { ...fn, ...updates } as MeshFunction
+          }
+        })
+
+        // Create a new EvFile with the updated functions
+        const updatedEv = Object.assign(Object.create(Object.getPrototypeOf(prev.ev)), prev.ev)
+        updatedEv.functions = updatedEvFunctions
+
+        return {
+          ...prev,
+          functions: updatedFunctions,
+          ev: updatedEv
+        }
+      }
+
+      return { ...prev, functions: updatedFunctions }
+    })
+  }
+
   const saveScripts = async () => {
     if (!state.ev) {
       setMessage("No scripts loaded to save", true)
@@ -397,7 +510,6 @@ export function useScriptsState() {
             // Update the function's script in the EvFile
             evFile.setFunctionScript(i, compiledScript)
 
-            console.debug(`[Scripts] Compiled script for function ${i} (${scriptKey})`)
           } catch (error) {
             console.error(`[Scripts] Failed to compile script for function ${i} (${scriptKey}):`, error)
             setMessage(`Failed to compile script for function ${i}: ${(error as Error).message}`, true)
@@ -409,7 +521,6 @@ export function useScriptsState() {
           if (stateFunc && stateFunc.script !== func.script) {
             // If the script text has been directly modified, update it
             evFile.setFunctionScript(i, stateFunc.script)
-            console.debug(`[Scripts] Updated script for function ${i} (${scriptKey})`)
           }
         }
       }
@@ -437,6 +548,7 @@ export function useScriptsState() {
     ev: state.ev,
     decompiled: state.decompiled,
     loaded: state.loaded,
+    cursorTarget: state.cursorTarget,
     loadScripts,
     saveScripts,
     addModelScript,
@@ -447,12 +559,15 @@ export function useScriptsState() {
     isScriptSelected,
     getSelectedScript,
     updateSelectedScript,
+    updateScriptByReference,
     setDecompiledMode,
     getDecompiledScript,
     updateDecompiledScript,
     getScriptKey,
     isAliasSelected,
     getAliasTargetScript,
+    setCursorTarget,
+    clearCursorTarget,
     // Navigation functions
     canGoBack,
     canGoForward,

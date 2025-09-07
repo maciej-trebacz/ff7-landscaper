@@ -1,9 +1,10 @@
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from "@/components/ui/button"
 import { MessageRow } from "./MessageRow"
 import { useMessagesState } from "@/hooks/useMessagesState"
 
 export function MessagesTab() {
-  const { messages, loaded, updateMessage } = useMessagesState()
+  const { messages, loaded, updateMessage, addMessage, removeMessage } = useMessagesState()
 
   if (!loaded) {
     return (
@@ -22,8 +23,18 @@ export function MessagesTab() {
             index={index}
             message={message}
             onChange={(value) => updateMessage(index, value)}
+            onRemove={removeMessage}
           />
         ))}
+        <div className="flex justify-center pt-4">
+          <Button
+            onClick={() => addMessage("")}
+            variant="secondary"
+            size="sm"
+          >
+            Add Message
+          </Button>
+        </div>
       </div>
     </ScrollArea>
   )

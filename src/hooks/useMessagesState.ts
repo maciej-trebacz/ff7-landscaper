@@ -66,15 +66,8 @@ export function useMessagesState() {
   const saveMessages = async () => {
     try {
       console.debug("[Messages] Saving messages")
-      const mesData = await getFile("mes")
-      if (!mesData) {
-        throw new Error("Failed to read mes file")
-      }
-
-      const mesFile = new MesFile(mesData)
-      state.messages.forEach((text, index) => {
-        mesFile.setMessage(index, text)
-      })
+      const mesFile = new MesFile()
+      mesFile.setMessages(state.messages)
 
       const newData = mesFile.writeMessages()
       await setFile("mes", newData)
@@ -103,6 +96,28 @@ export function useMessagesState() {
     await invoke("update_mes_data", { data })
   }
 
+  const addMessage = (message: string = "") => {
+    setState(prev => {
+      const newMessages = [...prev.messages, message]
+      debouncedSync(newMessages)
+      return {
+        ...prev,
+        messages: newMessages
+      }
+    })
+  }
+
+  const removeMessage = (index: number) => {
+    setState(prev => {
+      const newMessages = prev.messages.filter((_, i) => i !== index)
+      debouncedSync(newMessages)
+      return {
+        ...prev,
+        messages: newMessages
+      }
+    })
+  }
+
   React.useEffect(() => {
     return () => {
       debouncedSync.cancel()
@@ -117,6 +132,8 @@ export function useMessagesState() {
     loaded: state.loaded,
     loadMessages,
     saveMessages,
-    updateMessage
+    updateMessage,
+    addMessage,
+    removeMessage
   }
 }

@@ -32,6 +32,9 @@ export type WorldscriptEditorHandle = {
   replaceCurrentCallArgs: (updates: Array<{ index: number; newText: string }>) => void
   getLine: (row: number) => string | null
   getLineCount: () => number
+  moveCursorTo: (row: number, col?: number) => void
+  isReady: () => boolean
+  getCursorPosition: () => { row: number; column: number } | null
 }
 
 export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, WorldscriptEditorProps>(function WorldscriptEditor(
@@ -491,6 +494,26 @@ export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, Worldscript
         const editor = editorRef.current
         if (!editor) return 0
         return editor.getSession().getLength()
+      },
+      moveCursorTo: (row: number, col: number = 0) => {
+        const editor = editorRef.current
+        if (!editor) return
+        const session = editor.getSession()
+        const lineCount = session.getLength()
+        const safeRow = Math.max(0, Math.min(row, lineCount - 1))
+        const line = session.getLine(safeRow) as string
+        const safeCol = Math.max(0, Math.min(col, line?.length ?? 0))
+        // Avoid triggering signature popover on programmatic move
+        suppressNextSignatureRef.current = true
+        editor.moveCursorTo(safeRow, safeCol)
+        editor.centerSelection()
+      },
+      isReady: () => !!editorRef.current,
+      getCursorPosition: () => {
+        const editor = editorRef.current
+        if (!editor) return null
+        const pos = editor.getCursorPosition()
+        return { row: pos.row, column: pos.column }
       },
     }),
     []

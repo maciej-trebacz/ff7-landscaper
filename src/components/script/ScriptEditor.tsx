@@ -3,7 +3,7 @@ import { useScriptsState } from "@/hooks/useScriptState"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FunctionType } from "@/ff7/evfile"
+import { FunctionType, FF7Function, SystemFunction, ModelFunction, MeshFunction } from "@/ff7/evfile"
 import { OpcodesEditor } from "@/components/script/OpcodesEditor"
 import {
   WorldscriptEditor,
@@ -29,8 +29,10 @@ export function ScriptEditor({
 }: ScriptEditorProps) {
   const {
     functions,
+    selectedScript,
     getSelectedScript,
     updateSelectedScript,
+    updateScriptByReference,
     decompiled: globalDecompiled,
     setDecompiledMode,
     getDecompiledScript,
@@ -40,14 +42,38 @@ export function ScriptEditor({
     getAliasTargetScript,
     isScriptSelected,
     selectScript,
+    cursorTarget,
+    clearCursorTarget,
   } = useScriptsState()
 
   const [isDecompiling, setIsDecompiling] = useState(false)
   const effectiveDecompiled = decompiled || globalDecompiled
   const localEditorHandleRef = useRef<WorldscriptEditorHandle | null>(null)
+  const [editorReady, setEditorReady] = useState(false)
+
+  // (moved below once content is available)
 
   const scriptToEdit = getSelectedScript()
   const systemFunctions = functions.filter((f) => f.type === FunctionType.System)
+
+  // Get the source script (the one that has the alias) when editing an alias
+  const getSourceScript = () => {
+    if (!scriptToEdit) return null
+    const isEditingAlias = isAliasSelected()
+    if (isEditingAlias) {
+      // When editing an alias, the source script is the selected one, not the target
+      return functions.find((f) => isScriptSelected(f)) || null
+    }
+    return scriptToEdit
+  }
+
+  const sourceScript = getSourceScript()
+
+  // Update the source script's properties directly
+  const updateSourceScript = (updates: Partial<FF7Function>) => {
+    if (!sourceScript) return
+    updateScriptByReference(sourceScript, updates)
+  }
 
   // Get the decompiled script content if in decompiled mode
   const decompiledContent = scriptToEdit ? getDecompiledScript(scriptToEdit) : ""
@@ -75,25 +101,42 @@ export function ScriptEditor({
     decompileScript()
   }, [scriptToEdit, effectiveDecompiled, decompiledContent])
 
-  const handleAliasChange = (checked: boolean) => {
+  // Move cursor after content is present and editor is ready
+  useEffect(() => {
+    if (!cursorTarget) return
+    if (!effectiveDecompiled) return
     if (!scriptToEdit) return
+    // require content to exist to ensure editor has text
+    const hasContent = !!decompiledContent && decompiledContent.length > 0
+    if (!hasContent) return
+    const handle = (editorHandleRef && (editorHandleRef as any).current) || localEditorHandleRef.current
+    if (!handle || !('moveCursorTo' in handle)) return
+    // Schedule on next frame to let Ace finish layout
+    requestAnimationFrame(() => {
+      handle.moveCursorTo(cursorTarget.row, cursorTarget.col ?? 0)
+      clearCursorTarget()
+    })
+  }, [cursorTarget, effectiveDecompiled, decompiledContent, scriptToEdit])
+
+  const handleAliasChange = (checked: boolean) => {
+    if (!sourceScript) return
 
     if (!checked) {
       // Remove alias
-      updateSelectedScript({ aliasId: undefined })
+      updateSourceScript({ aliasId: undefined })
     } else {
       // When checking the box, set it as an alias to the first available system function
       const firstSystemFunction = systemFunctions[0]
       if (firstSystemFunction) {
-        updateSelectedScript({ aliasId: firstSystemFunction.id })
+        updateSourceScript({ aliasId: firstSystemFunction.id })
       }
     }
   }
 
   const handleAliasSelect = (aliasId: string) => {
-    if (!scriptToEdit) return
+    if (!sourceScript) return
 
-    updateSelectedScript({ aliasId: parseInt(aliasId) })
+    updateSourceScript({ aliasId: parseInt(aliasId) })
   }
 
   const handleDecompiledChange = async (checked: boolean) => {
@@ -212,55 +255,54 @@ export function ScriptEditor({
                 Decompiled
               </Label>
             </div>
-            {isAliasSelected() ? (
-              <button
-                onClick={() => {
-                  const targetScript = getAliasTargetScript()
-                  if (targetScript) {
-                    selectScript(targetScript)
-                  }
-                }}
-                className="px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+            <>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="is-alias"
+                  checked={sourceScript?.aliasId !== undefined}
+                  onCheckedChange={handleAliasChange}
+                  disabled={!sourceScript || systemFunctions.length === 0}
+                />
+                <Label htmlFor="is-alias" className="text-xs">
+                  Alias to:
+                </Label>
+              </div>
+              <Select
+                value={sourceScript?.aliasId?.toString()}
+                onValueChange={handleAliasSelect}
+                disabled={!sourceScript || sourceScript.aliasId === undefined}
               >
-                Jump to {(() => {
-                  const target = getAliasTargetScript()
-                  if (!target) return ""
-                  return target.type === FunctionType.System
-                    ? `System ${target.id}`
-                    : `Model ${(target as any).modelId}:${target.id}`
-                })()}
-              </button>
-            ) : (
-              <>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="is-alias"
-                    checked={scriptToEdit.aliasId !== undefined}
-                    onCheckedChange={handleAliasChange}
-                    disabled={!scriptToEdit || systemFunctions.length === 0}
-                  />
-                  <Label htmlFor="is-alias" className="text-xs">
-                    Alias to:
-                  </Label>
-                </div>
-                <Select
-                  value={scriptToEdit?.aliasId?.toString()}
-                  onValueChange={handleAliasSelect}
-                  disabled={!scriptToEdit || scriptToEdit.aliasId === undefined}
+                <SelectTrigger className="h-7 text-xs w-[110px]">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  {systemFunctions.map((fn) => (
+                    <SelectItem key={fn.id} value={fn.id.toString()} className="text-xs">
+                      System {fn.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isAliasSelected() && (
+                <button
+                  onClick={() => {
+                    const targetScript = getAliasTargetScript()
+                    if (targetScript) {
+                      selectScript(targetScript)
+                    }
+                  }}
+                  className="px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
                 >
-                  <SelectTrigger className="h-7 text-xs w-[110px]">
-                    <SelectValue placeholder="None" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {systemFunctions.map((fn) => (
-                      <SelectItem key={fn.id} value={fn.id.toString()} className="text-xs">
-                        System {fn.id}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            )}
+                  Jump to {(() => {
+                    const target = getAliasTargetScript()
+                    if (!target) return ""
+                    return target.type === FunctionType.System
+                      ? `System ${target.id}`
+                      : `Model ${(target as any).modelId}:${target.id}`
+                  })()}
+                </button>
+              )}
+            </>
           </div>
         )}
       </div>
@@ -279,7 +321,16 @@ export function ScriptEditor({
                 onChange={handleScriptChange}
                 onContextChange={onWorldscriptContextChange}
                 showDetails={false}
-                ref={(editorHandleRef ?? localEditorHandleRef) as any}
+                ref={(instance: WorldscriptEditorHandle | null) => {
+                  if (!instance) return
+                  // store
+                  if (editorHandleRef && typeof editorHandleRef !== 'function') {
+                    ;(editorHandleRef as any).current = instance
+                  } else {
+                    localEditorHandleRef.current = instance
+                  }
+                  setEditorReady(true)
+                }}
                 className="h-full"
               />
             </div>
