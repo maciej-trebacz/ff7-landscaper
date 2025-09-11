@@ -96,6 +96,14 @@ html, body, #root {
     --sidebar-ring: 217.2 91.2% 59.8%;    
   }
 }
+
+/* Ace search highlight marker */
+.ace_marker-layer .ff7-search-highlight {
+  position: absolute;
+  background: rgba(255, 213, 74, 0.45);
+  border-radius: 2px;
+}
+
 @layer base {
   * {
     @apply border-border;

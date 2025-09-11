@@ -14,6 +14,12 @@ export type MapType = 'overworld' | 'underwater' | 'glacier'
 export type MapMode = 'selection' | 'export' | 'painting'
 export type AlternativeSection = { id: number, name: string }
 
+export const MAP_NAMES: Record<MapId, string> = {
+  WM0: "Overworld",
+  WM2: "Underwater",
+  WM3: "Great Glacier",
+}
+
 const ALTERNATIVE_SECTIONS: AlternativeSection[] = [
   { id: 50, name: "Temple of Ancients gone" },
   { id: 41, name: "Junon Area crater (left)" },

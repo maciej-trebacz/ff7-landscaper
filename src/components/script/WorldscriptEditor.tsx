@@ -2,6 +2,7 @@ import AceEditor from "react-ace"
 import "ace-builds/src-noconflict/theme-tomorrow_night"
 import "ace-builds/src-noconflict/ext-language_tools"
 import { setCompleters } from "ace-builds/src-noconflict/ext-language_tools"
+import ace from "ace-builds/src-noconflict/ace"
 import "./AceWorldscript.js"
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { Opcodes, Namespace } from "../../ff7/worldscript/opcodes"
@@ -13,6 +14,7 @@ interface WorldscriptEditorProps {
   className?: string
   onContextChange?: (ctx: CallContext | null) => void
   showDetails?: boolean // show opcode description, notes and param descriptions
+  searchQuery?: string
 }
 
 export type CallParamMeta = { name: string; description: string; type?: any }
@@ -38,11 +40,12 @@ export type WorldscriptEditorHandle = {
 }
 
 export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, WorldscriptEditorProps>(function WorldscriptEditor(
-  { value, onChange, className, onContextChange, showDetails = false },
+  { value, onChange, className, onContextChange, showDetails = false, searchQuery },
   ref
 ) {
   const editorRef = useRef<any>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const searchMarkerIdsRef = useRef<number[]>([])
   const namespacesRef = useRef<string[]>([])
   const methodsByNamespaceRef = useRef<
     Record<
@@ -395,6 +398,10 @@ export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, Worldscript
 
   const handleLoad = (editor: any) => {
     editorRef.current = editor
+    // avoid built-in selected word highlight conflicting with our markers
+    try {
+      editor.setOption("highlightSelectedWord", false)
+    } catch {}
     editor.commands.on("afterExec", (e: any) => {
       if (e.command && e.command.name === "insertstring") {
         if (e.args === ".") {
@@ -425,6 +432,39 @@ export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, Worldscript
     editor.getSession().on("changeScrollLeft", () => setSignatureHelp(null))
     editor.renderer.on("scroll", () => setSignatureHelp(null))
   }
+
+  // Manage search highlights
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor) return
+    const session = editor.getSession()
+
+    // Clear existing markers
+    for (const id of searchMarkerIdsRef.current) {
+      session.removeMarker(id)
+    }
+    searchMarkerIdsRef.current = []
+
+    const query = (searchQuery ?? "").trim()
+    if (query.length < 3) return
+
+    const Search = (ace as any).require("ace/search").Search
+    const search = new Search()
+    search.set({ needle: query, caseSensitive: false, regExp: false, wholeWord: false, wrap: false })
+    const ranges = search.findAll(session) as any[]
+    for (const range of ranges) {
+      const id = session.addMarker(range, "ff7-search-highlight", "text", true)
+      searchMarkerIdsRef.current.push(id)
+    }
+
+    // Cleanup on unmount or deps change
+    return () => {
+      for (const id of searchMarkerIdsRef.current) {
+        session.removeMarker(id)
+      }
+      searchMarkerIdsRef.current = []
+    }
+  }, [searchQuery, value])
 
   useImperativeHandle(
     ref,

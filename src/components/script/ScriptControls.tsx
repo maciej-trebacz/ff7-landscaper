@@ -1,20 +1,14 @@
 import { Button } from "@/components/ui/button"
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Plus, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Trash2, Search, ChevronLeft, ChevronRight, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { MapId } from "@/hooks/useMapState"
+import { MapId, MAP_NAMES } from "@/hooks/useMapState"
 import { useScriptsState } from "@/hooks/useScriptState"
 import { FunctionType } from "@/ff7/evfile"
-import { useState } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { AddScriptModal } from "@/components/modals/AddScriptModal"
 import { useKeyboardShortcuts, getShortcutDisplay } from "@/hooks/useKeyboardShortcuts"
-
-const MAP_NAMES: Record<MapId, string> = {
-  WM0: "Overworld",
-  WM2: "Underwater",
-  WM3: "Great Glacier",
-}
 
 export function ScriptControls() {
   const {
@@ -29,8 +23,15 @@ export function ScriptControls() {
     canGoForward,
     goBack,
     goForward,
+    // Search functionality
+    searchQuery,
+    setSearchQuery,
+    searchScripts,
+    clearSearch,
   } = useScriptsState()
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [localSearchQuery, setLocalSearchQuery] = useState("")
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Set up keyboard shortcuts for script navigation
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
@@ -83,6 +84,44 @@ export function ScriptControls() {
   }
 
   const canAddScripts = scriptType === FunctionType.Model || scriptType === FunctionType.Mesh
+
+  // Search functionality
+  const handleSearchInput = useCallback((value: string) => {
+    setLocalSearchQuery(value)
+
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    // If search query is less than 3 characters, clear search
+    if (value.length < 3) {
+      setSearchQuery("")
+      clearSearch()
+      return
+    }
+
+    // Debounce search with 200ms delay
+    searchTimeoutRef.current = setTimeout(async () => {
+      setSearchQuery(value)
+      await searchScripts(value)
+    }, 200)
+  }, [setSearchQuery, searchScripts, clearSearch])
+
+  const handleClearSearch = () => {
+    setLocalSearchQuery("")
+    setSearchQuery("")
+    clearSearch()
+  }
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [])
 
   return (
     <div className="w-full bg-sidebar border-b border-slate-800/40 flex items-center justify-between gap-2 px-2 py-1">
@@ -203,7 +242,23 @@ export function ScriptControls() {
       <div className="flex items-center gap-1.5">
         <div className="relative">
           <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input type="search" placeholder="Search scripts..." className="h-6 w-[200px] pl-8 text-xs" />
+          <Input
+            type="text"
+            placeholder="Search scripts..."
+            value={localSearchQuery}
+            onChange={(e) => handleSearchInput(e.target.value)}
+            className="h-6 w-[200px] pl-8 pr-8 text-xs"
+          />
+          {(localSearchQuery || searchQuery) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1 h-4 w-4"
+              onClick={handleClearSearch}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
         </div>
       </div>
 

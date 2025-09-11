@@ -14,6 +14,12 @@ interface SelectedScript {
   y?: number
 }
 
+interface SearchResult {
+  script: FF7Function
+  mapId: MapId
+  matchText: string
+}
+
 interface ScriptsState {
   functions: FF7Function[]
   selectedMap: MapId
@@ -26,6 +32,9 @@ interface ScriptsState {
   currentHistoryIndex: number // Current position in history (-1 means no history)
   loaded: boolean
   cursorTarget: { row: number; col: number } | null
+  searchQuery: string
+  searchResults: SearchResult[]
+  isSearching: boolean
 }
 
 const scriptsStateAtom = atom<ScriptsState>({
@@ -40,6 +49,9 @@ const scriptsStateAtom = atom<ScriptsState>({
   currentHistoryIndex: -1,
   loaded: false,
   cursorTarget: null,
+  searchQuery: "",
+  searchResults: [],
+  isSearching: false,
 })
 
 export function useScriptsState() {
@@ -479,6 +491,92 @@ export function useScriptsState() {
     })
   }
 
+  // Search functionality
+  const setSearchQuery = (query: string) => {
+    setState((prev) => ({ ...prev, searchQuery: query }))
+  }
+
+  const searchScripts = async (query: string): Promise<SearchResult[]> => {
+    if (query.length < 3) return []
+
+    setState((prev) => ({ ...prev, isSearching: true }))
+
+    try {
+      const results: SearchResult[] = []
+      const maps: MapId[] = ['WM0', 'WM2', 'WM3']
+
+      // Search across all maps
+      for (const mapId of maps) {
+        try {
+          const evData = await getFile(mapId.toLowerCase() + ".ev")
+          if (!evData) continue
+
+          const evFile = new EvFile(evData)
+
+          // Search through each function's decompiled script
+          for (const func of evFile.functions) {
+            const scriptKey = getScriptKey(func)
+            let scriptContent = state.decompiledScripts[scriptKey]
+
+            // If we don't have the decompiled content cached, we need to decompile it
+            if (!scriptContent) {
+              try {
+                const worldscript = new Worldscript(func.offset)
+                scriptContent = worldscript.decompile(func.script)
+                // Cache the decompiled content
+                setState((prev) => ({
+                  ...prev,
+                  decompiledScripts: {
+                    ...prev.decompiledScripts,
+                    [scriptKey]: scriptContent,
+                  },
+                }))
+              } catch (error) {
+                // Skip functions that can't be decompiled
+                continue
+              }
+            }
+
+            // Check if the query matches the decompiled content (case insensitive)
+            if (scriptContent.toLowerCase().includes(query.toLowerCase())) {
+              // Find the matching text snippet (up to 100 characters around the match)
+              const lowerContent = scriptContent.toLowerCase()
+              const lowerQuery = query.toLowerCase()
+              const matchIndex = lowerContent.indexOf(lowerQuery)
+              const start = Math.max(0, matchIndex - 50)
+              const end = Math.min(scriptContent.length, matchIndex + query.length + 50)
+              const matchText = scriptContent.substring(start, end)
+
+              results.push({
+                script: func,
+                mapId,
+                matchText: matchText.trim(),
+              })
+            }
+          }
+        } catch (error) {
+          console.error(`Error searching map ${mapId}:`, error)
+        }
+      }
+
+      setState((prev) => ({ ...prev, searchResults: results, isSearching: false }))
+      return results
+    } catch (error) {
+      console.error("Error during search:", error)
+      setState((prev) => ({ ...prev, isSearching: false }))
+      return []
+    }
+  }
+
+  const clearSearch = () => {
+    setState((prev) => ({
+      ...prev,
+      searchQuery: "",
+      searchResults: [],
+      isSearching: false
+    }))
+  }
+
   const saveScripts = async () => {
     if (!state.ev) {
       setMessage("No scripts loaded to save", true)
@@ -549,6 +647,12 @@ export function useScriptsState() {
     decompiled: state.decompiled,
     loaded: state.loaded,
     cursorTarget: state.cursorTarget,
+    searchQuery: state.searchQuery,
+    searchResults: state.searchResults,
+    isSearching: state.isSearching,
+    setSearchQuery,
+    searchScripts,
+    clearSearch,
     loadScripts,
     saveScripts,
     addModelScript,
@@ -568,7 +672,6 @@ export function useScriptsState() {
     getAliasTargetScript,
     setCursorTarget,
     clearCursorTarget,
-    // Navigation functions
     canGoBack,
     canGoForward,
     goBack,

@@ -29,7 +29,6 @@ export function ScriptEditor({
 }: ScriptEditorProps) {
   const {
     functions,
-    selectedScript,
     getSelectedScript,
     updateSelectedScript,
     updateScriptByReference,
@@ -44,6 +43,7 @@ export function ScriptEditor({
     selectScript,
     cursorTarget,
     clearCursorTarget,
+    searchQuery,
   } = useScriptsState()
 
   const [isDecompiling, setIsDecompiling] = useState(false)
@@ -189,41 +189,6 @@ export function ScriptEditor({
   const getScriptName = () => {
     if (!scriptToEdit) return null
 
-    const isEditingAlias = isAliasSelected()
-    const aliasTarget = isEditingAlias ? getAliasTargetScript() : null
-
-    if (isEditingAlias && aliasTarget) {
-      // Show both the alias source and target information
-      const originalScript = functions.find((f) => isScriptSelected(f))
-      let sourceName = ""
-      let targetName = ""
-
-      if (originalScript) {
-        switch (originalScript.type) {
-          case FunctionType.System:
-            sourceName = `System ${originalScript.id}`
-            break
-          case FunctionType.Model:
-            sourceName = `Model ${originalScript.modelId}:${originalScript.id}`
-            break
-          case FunctionType.Mesh:
-            sourceName = `Mesh ${originalScript.x},${originalScript.y}:${originalScript.id}`
-            break
-        }
-      }
-
-      switch (aliasTarget.type) {
-        case FunctionType.System:
-          targetName = `System ${aliasTarget.id}`
-          break
-        case FunctionType.Model:
-          targetName = `Model ${aliasTarget.modelId}:${aliasTarget.id}`
-          break
-      }
-
-      return `${sourceName} → ${targetName}`
-    }
-
     switch (scriptToEdit.type) {
       case FunctionType.System:
         return `System ${scriptToEdit.id}`
@@ -321,6 +286,7 @@ export function ScriptEditor({
                 onChange={handleScriptChange}
                 onContextChange={onWorldscriptContextChange}
                 showDetails={false}
+                searchQuery={searchQuery}
                 ref={(instance: WorldscriptEditorHandle | null) => {
                   if (!instance) return
                   // store
@@ -340,6 +306,7 @@ export function ScriptEditor({
                 key={getScriptKey(scriptToEdit)} // Force remount when script changes
                 value={scriptToEdit.script}
                 onChange={handleScriptChange}
+                searchQuery={searchQuery}
                 className="h-full"
               />
             </div>
