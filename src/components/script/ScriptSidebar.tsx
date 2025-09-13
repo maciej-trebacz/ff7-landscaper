@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils"
 import { useEffect, useMemo, useRef, useState } from "react"
+import type { ReactNode } from "react"
 import type { CallContext } from "@/components/script/WorldscriptEditor"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -28,6 +29,11 @@ type CustomRenderer = (
   ctx: CallContext,
   onBatchChange: (updates: Array<{ index: number; newText: string }>) => void
 ) => JSX.Element
+
+function Description({ children }: { children?: ReactNode }) {
+  if (!children) return null
+  return <div className="text-[11px] text-muted-foreground whitespace-pre-wrap">{children}</div>
+}
 
 // Custom hook for field selection logic
 function useFieldSelection(scenario?: number) {
@@ -113,7 +119,7 @@ function SetFieldEntryByIdUI({
       <div className="text-xs font-medium">
         {ctx.namespace}.{ctx.method}
       </div>
-      {ctx.description && <div className="text-[11px] text-muted-foreground">{ctx.description}</div>}
+      {ctx.description && <Description>{ctx.description}</Description>}
       <div className="space-y-1">
         <Label className="text-xs">Location</Label>
         <Select
@@ -189,7 +195,7 @@ function colorTriple(ctx: CallContext, onBatch: (updates: Array<{ index: number;
       <div className="text-xs font-medium">
         {ctx.namespace}.{ctx.method}
       </div>
-      {ctx.description && <div className="text-[11px] text-muted-foreground">{ctx.description}</div>}
+      {ctx.description && <Description>{ctx.description}</Description>}
       <div className="space-y-2">
         <Label className="text-xs">
           Color <span className="text-muted-foreground text-[11px]">(click to edit)</span>
@@ -228,7 +234,7 @@ export function ScriptSidebar({ className, context, onParamChange, onBatchParams
           <div className="text-xs font-medium">
             {context.namespace}.{context.method}
           </div>
-          {context.description && <div className="text-[11px] text-muted-foreground">{context.description}</div>}
+          {context.description && <Description>{context.description}</Description>}
           <div className="space-y-2">
             {context.params.map((p, i) => {
               const arg = context.args[i]
@@ -332,7 +338,7 @@ function numberSlider(
       <div className="text-xs font-medium">
         {ctx.namespace}.{ctx.method}
       </div>
-      {ctx.description && <div className="text-[11px] text-muted-foreground">{ctx.description}</div>}
+      {ctx.description && <Description>{ctx.description}</Description>}
       <div className="space-y-1">
         <Label className="text-xs">
           {label}: {val}
@@ -368,7 +374,7 @@ function mapOptions(ctx: CallContext, onBatch: (updates: Array<{ index: number; 
       <div className="text-xs font-medium">
         {ctx.namespace}.{ctx.method}
       </div>
-      {ctx.description && <div className="text-[11px] text-muted-foreground">{ctx.description}</div>}
+      {ctx.description && <Description>{ctx.description}</Description>}
       <div className="grid grid-cols-1 gap-1">
         {flags.map((f) => (
           <label key={f.bit} className="flex items-center gap-2 text-xs">
@@ -398,7 +404,7 @@ function EnterFieldUI({
       <div className="text-xs font-medium">
         {ctx.namespace}.{ctx.method}
       </div>
-      {ctx.description && <div className="text-[11px] text-muted-foreground">{ctx.description}</div>}
+      {ctx.description && <Description>{ctx.description}</Description>}
       <div className="space-y-1">
         <Label className="text-xs">Location</Label>
         <Select
@@ -464,7 +470,7 @@ function EntityModelSelectUI({
       <div className="text-xs font-medium">
         {ctx.namespace}.{ctx.method}
       </div>
-      {ctx.description && <div className="text-[11px] text-muted-foreground">{ctx.description}</div>}
+      {ctx.description && <Description>{ctx.description}</Description>}
       <div className="space-y-1">
         <Label className="text-xs">Model</Label>
         <Select
@@ -524,7 +530,7 @@ function EntityRotateToModelUI({
       <div className="text-xs font-medium">
         {ctx.namespace}.{ctx.method}
       </div>
-      {ctx.description && <div className="text-[11px] text-muted-foreground">{ctx.description}</div>}
+      {ctx.description && <Description>{ctx.description}</Description>}
 
       <div className="space-y-1">
         <Label className="text-xs">Model</Label>
@@ -587,7 +593,7 @@ function SetMessageUI({
       <div className="text-xs font-medium">
         {ctx.namespace}.{ctx.method}
       </div>
-      {ctx.description && <div className="text-[11px] text-muted-foreground">{ctx.description}</div>}
+      {ctx.description && <Description>{ctx.description}</Description>}
       <div className="space-y-1">
         <Label className="text-xs">Message</Label>
         <Select
@@ -742,9 +748,9 @@ function SetDimensionsUI({
         {ctx.namespace}.{ctx.method}
       </div>
       {ctx.description && (
-        <div className="text-[11px] text-muted-foreground">
+        <Description>
           {ctx.description} Screen: {SCREEN_W}x{SCREEN_H}
-        </div>
+        </Description>
       )}
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
@@ -843,7 +849,7 @@ function directionRadial(
       <div className="text-xs font-medium">
         {ctx.namespace}.{ctx.method}
       </div>
-      {ctx.description && <div className="text-[11px] text-muted-foreground">{ctx.description}</div>}
+      {ctx.description && <Description>{ctx.description}</Description>}
       <DirectionRadial value={val} onChange={(v) => onBatch([{ index, newText: String(v) }])} />
     </div>
   )
@@ -867,7 +873,7 @@ function SetMeshCoordsUI({
       <div className="text-xs font-medium">
         {ctx.namespace}.{ctx.method}
       </div>
-      {ctx.description && <div className="text-[11px] text-muted-foreground">{ctx.description}</div>}
+      {ctx.description && <Description>{ctx.description}</Description>}
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
           <Label className="text-xs">X</Label>
@@ -1079,7 +1085,7 @@ function SetCoordsInMeshUI({
       <div className="text-xs font-medium">
         {ctx.namespace}.{ctx.method}
       </div>
-      {ctx.description && <div className="text-[11px] text-muted-foreground">{ctx.description}</div>}
+      {ctx.description && <Description>{ctx.description}</Description>}
       {lastMesh ? (
         <div className="text-[11px] text-muted-foreground">
           Mesh X/Z: {lastMesh.x},{lastMesh.z}
@@ -1239,7 +1245,7 @@ function CallFunctionUI({
       <div className="text-xs font-medium">
         {ctx.namespace}.{ctx.method}
       </div>
-      {ctx.description && <div className="text-[11px] text-muted-foreground">{ctx.description}</div>}
+      {ctx.description && <Description>{ctx.description}</Description>}
 
       <div className="space-y-1">
         <Label className="text-xs">Entity</Label>

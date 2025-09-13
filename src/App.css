@@ -104,6 +104,99 @@ html, body, #root {
   border-radius: 2px;
 }
 
+/* Ace searchbox - themed to match app */
+.ace_search {
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  z-index: 40;
+  margin-right: 2px;
+}
+
+.ace_search .ace_search_form,
+.ace_search .ace_replace_form {
+  background: transparent;
+  border: 0;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 0;
+}
+
+.ace_search .ace_search_field {
+  background: hsl(var(--input));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 2px);
+  padding: 2px 6px;
+  outline: none;
+  font-size: 12px;
+}
+
+.ace_search .ace_search_field::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+.ace_search .ace_search_counter {
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+  margin: 0 2px;
+}
+
+.ace_search .ace_button,
+.ace_search .ace_searchbtn,
+.ace_search .ace_replacebtn {
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 2px);
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.ace_search .ace_button:hover,
+.ace_search .ace_searchbtn:hover,
+.ace_search .ace_replacebtn:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.ace_search .ace_button:active,
+.ace_search .ace_searchbtn:active,
+.ace_search .ace_replacebtn:active {
+  filter: brightness(0.95);
+}
+
+.ace_search .ace_searchbtn_close {
+  color: hsl(var(--muted-foreground));
+  padding: 8px;
+  margin-left: 4px;
+}
+
+.ace_search .ace_searchbtn_close:hover {
+  color: hsl(var(--foreground));
+}
+
+.ace_search .ace_search_options,
+.ace_search .ace_search_options label {
+  color: hsl(var(--muted-foreground));
+}
+
+.ace_search .ace_search_options {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+}
+
+.ace_search .ace_search_options label {
+  margin-right: 0;
+}
+
 @layer base {
   * {
     @apply border-border;

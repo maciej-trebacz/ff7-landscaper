@@ -61,13 +61,13 @@ export const SPECIAL_MAP: { [key: number]: { name: string; type: 'byte' | 'word'
   6: { name: 'last_field_id', type: 'byte' },
   7: { name: 'map_options', type: 'byte' },
   8: { name: 'player_entity_model_id', type: 'byte' },
-  9: { name: 'current_entity_model_id', type: 'byte' },
+  9: { name: 'current_chocobo_rating', type: 'byte' },
   10: { name: 'check_if_riding_chocobo', type: 'byte' },
   11: { name: 'battle_result', type: 'bit' },
   12: { name: 'prompt_window_result', type: 'byte' },
   13: { name: 'current_triangle_script_id', type: 'byte' },
   14: { name: 'party_leader_model_id', type: 'byte' },
-  15: { name: 'unknown_15', type: 'byte' },
+  15: { name: 'active_entity_model_id', type: 'byte' },
   16: { name: 'random_8bit_number', type: 'byte' },
 };
 

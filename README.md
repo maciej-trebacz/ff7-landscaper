@@ -15,6 +15,7 @@
 * [x] "Go to script" button for messages
 * [ ] Text preview & autosizing for messages
 * [x] Adding / removing messages
+* [ ] Battle ID picker (from Ultima)
 
 Map
 * [ ] changes are lost when changing current map, switching to a different tab or changing Alternatives
@@ -29,13 +30,17 @@ Scripts
 * [ ] Reset the script to what's in the game files
 * [ ] Show which scripts were modified after loading/saving
 * [ ] Prompt "You will lose unsaved changes" if there are any
-* [ ] Search feature in the script editor
-* [ ] Search across all scripts
+* [x] Search feature in the script editor
+* [x] Search across all scripts
 * [x] Custom mapping for Entities and Fields namespaces
 * [x] Can't properly set script alias - the dropdown disappears when you enable an alias
 * [x] System.call_function has wrong sidebar ui
 * [x] System.set_field_entry_by_id(51) in chocobo_29 model script - wrong opcode?
   * Another example in system_27
-* [ ] System.fade_out and fade_in has unknown 2nd parameter
-* [ ] Entity.set_vertical_speed - has "unknown" parameter
-* [ ] Verify Special.current_entity_model_id since code @ 0x7674e4 suggests something it's a different value
+* [x] System.fade_out and fade_in has unknown 2nd parameter
+* [x] Entity.set_vertical_speed - has "unknown" parameter
+* [x] Verify Special.current_entity_model_id since code @ 0x7674e4 suggests something it's a different value
+* [ ] Sound.play_sfx - add a play button to preview sounds
+      Might be difficult due to how sounds are stored.
+      See: https://forums.qhimm.com/index.php?topic=18502.msg260382#msg260382
+* [ ] When adding a new function before typing in the params the dropdowns in the sidebar do not work properly. Eg. System.call_function() and try setting the model or function id.

@@ -1,6 +1,7 @@
 import AceEditor from "react-ace"
 import "ace-builds/src-noconflict/theme-tomorrow_night"
 import "ace-builds/src-noconflict/ext-language_tools"
+import "ace-builds/src-noconflict/ext-searchbox"
 import { setCompleters } from "ace-builds/src-noconflict/ext-language_tools"
 import ace from "ace-builds/src-noconflict/ace"
 import "./AceWorldscript.js"
@@ -480,15 +481,23 @@ export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, Worldscript
         // Normalize spacing by rebuilding the whole args slice
         const openCol = Math.min(...args.map((a) => a.startCol))
         const closeCol = Math.max(...args.map((a) => a.endCol))
-        const pieces = args.map((a, i) => (i === index ? newText : a.text))
+        let pieces = args.map((a, i) => (i === index ? newText : a.text))
+        // Trim trailing empty arguments to avoid dangling commas
+        while (pieces.length > 0 && (pieces[pieces.length - 1] ?? "").trim() === "") {
+          pieces.pop()
+        }
         const rebuiltArgs = pieces.join(", ")
         const newLine = line.slice(0, openCol) + rebuiltArgs + line.slice(closeCol)
         session.replace({ start: { row: ctx.row, column: 0 }, end: { row: ctx.row, column: line.length } }, newLine)
         // Move cursor to the end of the updated argument to preserve context
-        let caretOffset = 0
-        for (let i = 0; i < index; i++) caretOffset += pieces[i].length + 2 // include ", "
-        caretOffset += pieces[index].length
-        const caretCol = openCol + caretOffset
+        let caretCol = openCol
+        if (pieces.length > 0) {
+          let caretOffset = 0
+          const safeIndex = Math.min(index, Math.max(0, pieces.length - 1))
+          for (let i = 0; i < safeIndex; i++) caretOffset += pieces[i].length + 2 // include ", "
+          caretOffset += pieces[safeIndex].length
+          caretCol = openCol + caretOffset
+        }
         suppressNextSignatureRef.current = true
         editor.moveCursorTo(ctx.row, caretCol)
         updateSignatureHelp(editor, { silent: true })
@@ -504,20 +513,28 @@ export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, Worldscript
         // Rebuild arguments slice region with normalized spacing
         const openCol = Math.min(...args.map((a) => a.startCol))
         const closeCol = Math.max(...args.map((a) => a.endCol))
-        const pieces: string[] = []
+        let pieces: string[] = []
         for (let i = 0; i < args.length; i++) {
           const text = byIndex.has(i) ? byIndex.get(i)! : args[i].text
           pieces.push(text)
+        }
+        // Trim trailing empty arguments to avoid dangling commas
+        while (pieces.length > 0 && (pieces[pieces.length - 1] ?? "").trim() === "") {
+          pieces.pop()
         }
         const rebuiltArgs = pieces.join(", ")
         const newLine = line.slice(0, openCol) + rebuiltArgs + line.slice(closeCol)
         session.replace({ start: { row: ctx.row, column: 0 }, end: { row: ctx.row, column: line.length } }, newLine)
         // Focus on the last updated argument
-        const focusIndex = Math.max(...updates.map((u) => u.index))
-        let caretOffset = 0
-        for (let i = 0; i < focusIndex; i++) caretOffset += pieces[i].length + 2
-        caretOffset += pieces[focusIndex].length
-        const caretCol = openCol + caretOffset
+        const rawFocusIndex = Math.max(...updates.map((u) => u.index))
+        let caretCol = openCol
+        if (pieces.length > 0) {
+          const focusIndex = Math.min(rawFocusIndex, Math.max(0, pieces.length - 1))
+          let caretOffset = 0
+          for (let i = 0; i < focusIndex; i++) caretOffset += pieces[i].length + 2
+          caretOffset += pieces[focusIndex].length
+          caretCol = openCol + caretOffset
+        }
         suppressNextSignatureRef.current = true
         editor.moveCursorTo(ctx.row, caretCol)
         updateSignatureHelp(editor, { silent: true })

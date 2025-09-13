@@ -327,6 +327,23 @@ export class Worldscript {
         };
         statements.push({ type: 'ExpressionStatement', expression: callExpr });
       }
+    } else if (opcode.mnemonic === Mnemonic.FADE_IN || opcode.mnemonic === Mnemonic.FADE_OUT) {
+      // Special-case decompile: consume both stack params but show only the speed argument
+      const params: Expression[] = [];
+      if (this.stack.length < opcode.stackParams) {
+        throw new Error(`Stack underflow for ${opcode.mnemonic} at line ${lineNumber}`);
+      }
+      for (let j = 0; j < opcode.stackParams; j++) {
+        params.push(this.stack.pop() as Expression);
+      }
+      params.reverse();
+      const speedParam = params[0];
+      const callExpr: FunctionCallExpression = {
+        type: 'FunctionCall',
+        callee: { type: 'Member', object: { type: 'Identifier', name: opcode.namespace }, property: { type: 'Identifier', name: opcode.name } },
+        arguments: [speedParam]
+      };
+      statements.push({ type: 'ExpressionStatement', expression: callExpr });
     } else if (opcode.pushesResult) {
       const params: Expression[] = [];
       if (this.stack.length < opcode.stackParams) {
@@ -860,6 +877,23 @@ export class Worldscript {
       instructions.push({ type: 'instruction', mnemonic: 'WAIT_FRAMES', codeParams: [] });
       instructions.push({ type: 'instruction', mnemonic: 'WAIT', codeParams: [] });
       
+      return instructions;
+    } else if (objectName === 'System' && (functionName === 'fade_in' || functionName === 'fade_out')) {
+      // Accept single-arg API and insert implicit 0 for the unused parameter
+      if (expr.arguments.length !== 1 && expr.arguments.length !== 2) {
+        throw new Error('System.fade_in/out expects one (speed) or two arguments.');
+      }
+      const opcode = this.getOpcodeForFunctionCall(callee);
+      const instructions: Instruction[] = [];
+      // Always push speed first
+      instructions.push(...this.generateExpression(expr.arguments[0]));
+      // Push unused arg: use provided second arg if present, otherwise implicit 0
+      if (expr.arguments.length === 2) {
+        instructions.push(...this.generateExpression(expr.arguments[1]));
+      } else {
+        instructions.push(...this.generateExpression({ type: 'Literal', value: 0 } as LiteralExpression));
+      }
+      instructions.push({ type: 'instruction', mnemonic: opcode.mnemonic, codeParams: [] });
       return instructions;
     } else {
       const opcode = this.getOpcodeForFunctionCall(callee);
