@@ -1,6 +1,7 @@
 import { atom, useAtom } from 'jotai'
 import { useStatusBar } from './useStatusBar'
 import { useLgpState } from './useLgpState'
+import { useAppState } from './useAppState'
 import { FieldTblFile } from '@/ff7/fieldtblfile'
 
 export interface FieldEntryInfo {
@@ -32,6 +33,7 @@ export function useLocationsState() {
   const [state, setState] = useAtom(locationsStateAtom)
   const { setMessage } = useStatusBar()
   const { getFile, setFile } = useLgpState()
+  const { markUnsavedChanges, clearUnsavedChanges } = useAppState()
 
   const loadLocations = async () => {
     try {
@@ -71,6 +73,7 @@ export function useLocationsState() {
       nextEntries[index] = nextEntry
       return { ...prev, entries: nextEntries }
     })
+    markUnsavedChanges()
   }
 
   const copyScenario = (index: number, from: 'default' | 'alternative', to: 'default' | 'alternative') => {
@@ -89,6 +92,7 @@ export function useLocationsState() {
       nextEntries[index] = nextEntry
       return { ...prev, entries: nextEntries }
     })
+    markUnsavedChanges()
   }
 
   const saveLocations = async () => {
@@ -100,6 +104,7 @@ export function useLocationsState() {
       const data = state.file.writeFile()
       await setFile('field.tbl', data)
       setMessage('Locations saved successfully!')
+      clearUnsavedChanges()
     } catch (error) {
       console.error('[Locations] Failed to save field.tbl', error)
       setMessage('Failed to save locations: ' + (error as Error).message, true)

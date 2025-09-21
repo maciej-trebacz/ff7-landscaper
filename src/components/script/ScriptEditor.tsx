@@ -89,8 +89,8 @@ export function ScriptEditor({
         const worldscript = new Worldscript(scriptToEdit.offset, false)
         // Decompile the script
         const decompiled = worldscript.decompile(scriptToEdit.script, true)
-        // Store the decompiled script
-        updateDecompiledScript(scriptToEdit, decompiled)
+        // Store the decompiled script (not a user change, just caching)
+        updateDecompiledScript(scriptToEdit, decompiled, false)
       } catch (error) {
         console.error("Failed to decompile script:", error)
       } finally {
@@ -153,7 +153,7 @@ export function ScriptEditor({
         // Decompile the current raw script
         const worldscript = new Worldscript(scriptToEdit.offset, false)
         const decompiled = worldscript.decompile(scriptToEdit.script, true)
-        updateDecompiledScript(scriptToEdit, decompiled)
+        updateDecompiledScript(scriptToEdit, decompiled, false)
       } else {
         // Switching from decompiled to raw mode
         // Compile the current decompiled script back to opcodes
@@ -178,8 +178,8 @@ export function ScriptEditor({
     if (!scriptToEdit) return
 
     if (effectiveDecompiled) {
-      // Update the decompiled script
-      updateDecompiledScript(scriptToEdit, value)
+      // Update the decompiled script (user change)
+      updateDecompiledScript(scriptToEdit, value, true)
     } else {
       // Update the original script
       updateSelectedScript({ script: value })

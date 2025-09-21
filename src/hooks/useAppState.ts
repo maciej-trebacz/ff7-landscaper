@@ -1,5 +1,5 @@
 import { atom, useAtom } from 'jotai'
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { invoke } from "@tauri-apps/api/core";
 
 interface AppState {
@@ -15,6 +15,7 @@ interface AppState {
     title: string
     message: string
   }
+  unsavedChanges: boolean
 }
 
 const appStateAtom = atom<AppState>({
@@ -29,7 +30,8 @@ const appStateAtom = atom<AppState>({
     show: false,
     title: '',
     message: ''
-  }
+  },
+  unsavedChanges: false
 })
 
 export function useAppState() {
@@ -40,7 +42,8 @@ export function useAppState() {
       ...prev,
       dataPath: path,
       opened: true,
-      openedTime: Date.now()
+      openedTime: Date.now(),
+      unsavedChanges: false
     }))
   }
 
@@ -78,6 +81,14 @@ export function useAppState() {
     }))
   }
 
+  const markUnsavedChanges = useCallback(() => {
+    setState(prev => (prev.unsavedChanges ? prev : { ...prev, unsavedChanges: true }))
+  }, [setState])
+
+  const clearUnsavedChanges = useCallback(() => {
+    setState(prev => (prev.unsavedChanges ? { ...prev, unsavedChanges: false } : prev))
+  }, [setState])
+
   const checkConnection = async () => {
     try {
       const isRunning = await invoke<boolean>('is_ff7_running')
@@ -105,6 +116,8 @@ export function useAppState() {
     setLoadingStep,
     setCurrentTab,
     showAlert,
-    hideAlert
+    hideAlert,
+    markUnsavedChanges,
+    clearUnsavedChanges
   }
 }

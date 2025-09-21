@@ -82,7 +82,7 @@ export const dimensions = {
 
 export function useMapState() {
   const [state, setState] = useAtom(mapStateAtom)
-  const { dataPath } = useAppState()
+  const { dataPath, markUnsavedChanges, clearUnsavedChanges } = useAppState()
   const { getFile } = useLgpState()
 
   const getTexturesForMapType = (mapType: MapType): WorldMapTexture[] => {
@@ -183,6 +183,7 @@ export function useMapState() {
       const worldmapData = prev.map ? parseWorldmap(prev.map, prev.mapType, alternatives, changed?.id) : null;
       return { ...prev, enabledAlternatives: alternatives, worldmap: worldmapData };
     });
+    markUnsavedChanges()
   }
 
   // Centralized map type setter; does not load by itself
@@ -212,7 +213,8 @@ export function useMapState() {
       }
       return prev;
     });
-  }, [setState]);
+    markUnsavedChanges()
+  }, [setState, markUnsavedChanges]);
 
   const saveMap = async () => {
     if (!state.map) return;
@@ -240,6 +242,7 @@ export function useMapState() {
     const botData = state.map.writeBot()
     await writeFile(path + '.BOT', botData)
     console.timeEnd("[Map] Saving map")
+    clearUnsavedChanges()
   }
 
   const setMode = (mode: MapMode) => {
@@ -368,6 +371,7 @@ export function useMapState() {
         triangleMap: [...prev.triangleMap] // Create new array to trigger re-render
       };
     });
+    markUnsavedChanges()
   };
 
   const updateSingleTriangle = (updates: TriangleUpdates) => {
@@ -402,6 +406,7 @@ export function useMapState() {
         triangleMap: [...prev.triangleMap] // Create new array to trigger re-render
       };
     });
+    markUnsavedChanges()
   };
 
   const setTriangleMap = useCallback((triangleMap: TriangleWithVertices[], updateColors?: () => void, updateTriangleTexture?: (triangle: TriangleWithVertices) => void, updateTriangleNormals?: (triangle: TriangleWithVertices, normal0: { x: number; y: number; z: number }, normal1: { x: number; y: number; z: number }, normal2: { x: number; y: number; z: number }) => void) => {
@@ -423,6 +428,7 @@ export function useMapState() {
         changedMeshes: alreadyChanged ? prev.changedMeshes : [...prev.changedMeshes, [row, col]]
       };
     });
+    markUnsavedChanges()
   };
 
   const setSelectedTriangle = useCallback((triangleIndex: number | null) => {

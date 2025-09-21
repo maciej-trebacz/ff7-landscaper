@@ -1,6 +1,7 @@
 import { atom, useAtom } from "jotai"
 import { useStatusBar } from "./useStatusBar"
 import { useLgpState } from "./useLgpState"
+import { useAppState } from "./useAppState"
 import { MapId } from "./useMapState"
 import { EvFile, FF7Function, FunctionType, SystemFunction, ModelFunction, MeshFunction } from "@/ff7/evfile"
 import { Worldscript } from "@/ff7/worldscript/worldscript"
@@ -35,6 +36,7 @@ interface ScriptsState {
   searchQuery: string
   searchResults: SearchResult[]
   isSearching: boolean
+  modifiedScripts: Set<string> // Set of script keys that have been modified
 }
 
 const scriptsStateAtom = atom<ScriptsState>({
@@ -52,12 +54,14 @@ const scriptsStateAtom = atom<ScriptsState>({
   searchQuery: "",
   searchResults: [],
   isSearching: false,
+  modifiedScripts: new Set<string>(),
 })
 
 export function useScriptsState() {
   const [state, setState] = useAtom(scriptsStateAtom)
   const { setMessage } = useStatusBar()
   const { getFile, setFile } = useLgpState()
+  const { markUnsavedChanges, clearUnsavedChanges } = useAppState()
 
   const loadScripts = async (mapId?: MapId): Promise<FF7Function[] | undefined> => {
     try {
@@ -70,6 +74,7 @@ export function useScriptsState() {
         decompiledScripts: {}, // Clear decompiled scripts when loading new scripts
         scriptHistory: [], // Clear script history when loading new scripts
         currentHistoryIndex: -1,
+        modifiedScripts: new Set<string>(), // Clear modified scripts tracking when loading new scripts
       }))
 
       const targetMap = mapId || state.selectedMap
@@ -293,6 +298,8 @@ export function useScriptsState() {
         ...updates,
       } as FF7Function)
     }
+    markScriptModified(currentScript)
+    markUnsavedChanges()
   }
 
   const setDecompiledMode = (enabled: boolean) => {
@@ -318,12 +325,25 @@ export function useScriptsState() {
     }
   }
 
+  const markScriptModified = (script: FF7Function) => {
+    const key = getScriptKey(script)
+    setState((prev) => ({
+      ...prev,
+      modifiedScripts: new Set([...prev.modifiedScripts, key])
+    }))
+  }
+
+  const isScriptModified = (script: FF7Function): boolean => {
+    const key = getScriptKey(script)
+    return state.modifiedScripts.has(key)
+  }
+
   const getDecompiledScript = (script: FF7Function): string => {
     const key = getScriptKey(script)
     return state.decompiledScripts[key] || ""
   }
 
-  const updateDecompiledScript = (script: FF7Function, content: string) => {
+  const updateDecompiledScript = (script: FF7Function, content: string, isUserChange: boolean = false) => {
     const key = getScriptKey(script)
     setState((prev) => ({
       ...prev,
@@ -332,6 +352,12 @@ export function useScriptsState() {
         [key]: content,
       },
     }))
+
+    // Only mark as modified if this is a user-initiated change, not just caching decompiled content
+    if (isUserChange) {
+      markScriptModified(script)
+      markUnsavedChanges()
+    }
   }
 
   const addModelScript = async (modelId: number, functionId: number) => {
@@ -352,6 +378,8 @@ export function useScriptsState() {
       selectScript(newFunction)
 
       setMessage(`Added new model script ${modelId}:${functionId}`)
+      markScriptModified(newFunction)
+      markUnsavedChanges()
       return newFunction
     } catch (error) {
       console.error("Error adding model script:", error)
@@ -378,6 +406,8 @@ export function useScriptsState() {
       selectScript(newFunction)
 
       setMessage(`Added new mesh script ${x},${y}:${functionId}`)
+      markScriptModified(newFunction)
+      markUnsavedChanges()
       return newFunction
     } catch (error) {
       console.error("Error adding mesh script:", error)
@@ -431,9 +461,9 @@ export function useScriptsState() {
             case FunctionType.System:
               return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id
             case FunctionType.Model:
-              return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id && fn.modelId === scriptToUpdate.modelId
+              return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id && fn.modelId === (scriptToUpdate as ModelFunction).modelId
             case FunctionType.Mesh:
-              return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id && fn.x === scriptToUpdate.x && fn.y === scriptToUpdate.y
+              return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id && fn.x === (scriptToUpdate as MeshFunction).x && fn.y === (scriptToUpdate as MeshFunction).y
           }
         })()
 
@@ -458,9 +488,9 @@ export function useScriptsState() {
               case FunctionType.System:
                 return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id
               case FunctionType.Model:
-                return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id && fn.modelId === scriptToUpdate.modelId
+                return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id && fn.modelId === (scriptToUpdate as ModelFunction).modelId
               case FunctionType.Mesh:
-                return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id && fn.x === scriptToUpdate.x && fn.y === scriptToUpdate.y
+                return fn.type === scriptToUpdate.type && fn.id === scriptToUpdate.id && fn.x === (scriptToUpdate as MeshFunction).x && fn.y === (scriptToUpdate as MeshFunction).y
             }
           })()
 
@@ -489,6 +519,8 @@ export function useScriptsState() {
 
       return { ...prev, functions: updatedFunctions }
     })
+    markScriptModified(scriptToUpdate)
+    markUnsavedChanges()
   }
 
   // Search functionality
@@ -523,14 +555,8 @@ export function useScriptsState() {
               try {
                 const worldscript = new Worldscript(func.offset)
                 scriptContent = worldscript.decompile(func.script)
-                // Cache the decompiled content
-                setState((prev) => ({
-                  ...prev,
-                  decompiledScripts: {
-                    ...prev.decompiledScripts,
-                    [scriptKey]: scriptContent,
-                  },
-                }))
+                // Cache the decompiled content (not a user change, just caching)
+                updateDecompiledScript(func, scriptContent, false)
               } catch (error) {
                 // Skip functions that can't be decompiled
                 continue
@@ -632,6 +658,8 @@ export function useScriptsState() {
 
       console.timeEnd("[Scripts] Saving scripts")
       setMessage("Scripts saved successfully!")
+      setState((prev) => ({ ...prev, modifiedScripts: new Set() })) // Clear modified scripts tracking
+      clearUnsavedChanges()
     } catch (error) {
       console.error("Error saving scripts:", error)
       setMessage("Failed to save scripts: " + (error as Error).message, true)
@@ -676,5 +704,6 @@ export function useScriptsState() {
     canGoForward,
     goBack,
     goForward,
+    isScriptModified,
   }
 }

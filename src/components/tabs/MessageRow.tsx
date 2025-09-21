@@ -41,8 +41,8 @@ export function MessageRow({ index, message, onChange, onRemove }: MessageRowPro
           try {
             const worldscript = new Worldscript(script.offset, false)
             decompiledContent = worldscript.decompile(script.script, true)
-            // Store it for future use
-            updateDecompiledScript(script, decompiledContent)
+            // Store it for future use (not a user change, just caching)
+            updateDecompiledScript(script, decompiledContent, false)
           } catch (error) {
             return false
           }
@@ -60,7 +60,7 @@ export function MessageRow({ index, message, onChange, onRemove }: MessageRowPro
           try {
             const ws = new Worldscript(targetScript.offset, false)
             content = ws.decompile(targetScript.script, true)
-            updateDecompiledScript(targetScript, content)
+            updateDecompiledScript(targetScript, content, false)
           } catch (err) {
             
           }

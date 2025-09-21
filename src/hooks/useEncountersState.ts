@@ -36,7 +36,7 @@ export function useEncountersState() {
   const [state, setState] = useAtom(encountersStateAtom)
   const { setMessage } = useStatusBar()
   const { getFile, setFile } = useLgpState()
-  const { dataPath } = useAppState()
+  const { dataPath, markUnsavedChanges, clearUnsavedChanges } = useAppState()
 
   const loadEncounters = async () => {
     try {
@@ -59,6 +59,7 @@ export function useEncountersState() {
       const data = state.file.writeFile()
       await setFile('enc_w.bin', data)
       setMessage('Encounters saved successfully!')
+      clearUnsavedChanges()
     } catch (error) {
       console.error('[Encounters] Failed to save enc_w.bin', error)
       setMessage('Failed to save encounters: ' + (error as Error).message, true)
@@ -82,6 +83,7 @@ export function useEncountersState() {
         data: newData
       }
     })
+    markUnsavedChanges()
   }
 
   const updateChocobo = (index: number, updates: Partial<ChocoboRating>) => {
@@ -101,6 +103,7 @@ export function useEncountersState() {
         data: newData
       }
     })
+    markUnsavedChanges()
   }
 
   const updateEncounterMeta = (
@@ -127,6 +130,7 @@ export function useEncountersState() {
         data: newData
       }
     })
+    markUnsavedChanges()
   }
 
   const updateEncounterPair = (
@@ -164,6 +168,7 @@ export function useEncountersState() {
         data: newData
       }
     })
+    markUnsavedChanges()
   }
 
   const loadExeFile = async () => {
@@ -190,6 +195,7 @@ export function useEncountersState() {
       const data = state.exeFile.writeFile()
       await writeFile(path, data)
       setMessage('FF7 executable saved successfully!')
+      clearUnsavedChanges()
     } catch (error) {
       console.error('[EXE] Failed to save ff7_en.exe', error)
       setMessage('Failed to save FF7 executable: ' + (error as Error).message, true)
@@ -216,6 +222,7 @@ export function useEncountersState() {
         exeData: newData
       }
     })
+    markUnsavedChanges()
   }
 
   const updateTerrainRegionBulk = (
@@ -239,6 +246,7 @@ export function useEncountersState() {
         exeData: newData
       }
     })
+    markUnsavedChanges()
   }
 
   return {

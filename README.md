@@ -22,14 +22,14 @@ Map
 * [ ] saving changes to alternative sections doesn't work
 * [x] improve camera orbiting/panning
 * [x] importing from .obj does not work properly - sometimes a vertex position will be set to 0, 0, 0
+* [ ] when importing a map we should check the number of vertices and warn user if it's bigger than 122.
 
 Scripts
 * [x] Make sure scripts are properly compiled and saved into the game data files
 * [x] Adding a new script (tried highwind - touched and a mesh script) crashes the game
 * [x] Undo/redo support for script editing
-* [ ] Reset the script to what's in the game files
-* [ ] Show which scripts were modified after loading/saving
-* [ ] Prompt "You will lose unsaved changes" if there are any
+* [x] Show which scripts were modified after loading/saving
+* [x] Prompt "You will lose unsaved changes" if there are any
 * [x] Search feature in the script editor
 * [x] Search across all scripts
 * [x] Custom mapping for Entities and Fields namespaces
@@ -40,7 +40,7 @@ Scripts
 * [x] System.fade_out and fade_in has unknown 2nd parameter
 * [x] Entity.set_vertical_speed - has "unknown" parameter
 * [x] Verify Special.current_entity_model_id since code @ 0x7674e4 suggests something it's a different value
+* [ ] When adding a new function before typing in the params the dropdowns in the sidebar do not work properly. Eg. System.call_function() and try setting the model or function id.
 * [ ] Sound.play_sfx - add a play button to preview sounds
       Might be difficult due to how sounds are stored.
       See: https://forums.qhimm.com/index.php?topic=18502.msg260382#msg260382
-* [ ] When adding a new function before typing in the params the dropdowns in the sidebar do not work properly. Eg. System.call_function() and try setting the model or function id.

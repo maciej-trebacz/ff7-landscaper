@@ -21,6 +21,8 @@
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",
-    "dialog:allow-message"
+    "dialog:allow-message",
+    "core:window:allow-close",
+    "core:window:allow-destroy"
   ]
 }

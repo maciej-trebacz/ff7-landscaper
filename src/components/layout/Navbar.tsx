@@ -8,6 +8,8 @@ import { open } from "@tauri-apps/plugin-dialog"
 import { validateFF7Directory } from "@/lib/ff7-data"
 import { AlertDialog } from "@/components/ui/AlertDialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { useState } from "react"
 import { useLgpState } from "@/hooks/useLgpState"
 import { useMapState } from "@/hooks/useMapState"
 
@@ -19,13 +21,15 @@ import { useEffect, useRef } from "react"
 
 export function Navbar() {
   const { setMessage } = useStatusBar()
-  const { alert, showAlert, hideAlert, setDataPath, setLoading, setLoadingStep } = useAppState()
+  const { alert, showAlert, hideAlert, setDataPath, setLoading, setLoadingStep, unsavedChanges } = useAppState()
   const { saveMessages, loadMessages } = useMessagesState()
   const { saveMap, loadMap, loadTextures, mapType } = useMapState()
   const { saveScripts, loadScripts } = useScriptsState()
   const { saveLocations, loadLocations } = useLocationsState()
   const { saveEncounters, loadEncounters } = useEncountersState()
   const { loadLgp, opened, openedTime } = useLgpState()
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [pendingDirectory, setPendingDirectory] = useState<string | null>(null)
 
   const clearFocus = () => {
     document.activeElement instanceof HTMLElement && document.activeElement.blur()
@@ -45,10 +49,12 @@ export function Navbar() {
         const validation = await validateFF7Directory(selected as string)
         console.debug("[Navbar] Validating FF7 directory:", validation)
         if (validation.valid) {
-          setDataPath(selected as string)
-          setLoading(true)
-          setMessage("Loading world_us.lgp...")
-          await loadLgp(selected as string)
+          if (unsavedChanges) {
+            setPendingDirectory(selected as string)
+            setConfirmDialogOpen(true)
+          } else {
+            await proceedWithDirectory(selected as string)
+          }
         } else {
           showAlert("Invalid Directory", validation.error || "Unknown error occurred")
         }
@@ -57,6 +63,26 @@ export function Navbar() {
       showAlert("Error", "Failed to open directory: " + (error as Error).message)
       console.error(error)
     }
+  }
+
+  const proceedWithDirectory = async (directory: string) => {
+    setDataPath(directory)
+    setLoading(true)
+    setMessage("Loading world_us.lgp...")
+    await loadLgp(directory)
+  }
+
+  const handleConfirmOpenDirectory = async () => {
+    if (pendingDirectory) {
+      await proceedWithDirectory(pendingDirectory)
+      setPendingDirectory(null)
+    }
+    setConfirmDialogOpen(false)
+  }
+
+  const handleCancelOpenDirectory = () => {
+    setPendingDirectory(null)
+    setConfirmDialogOpen(false)
   }
 
   useEffect(() => {
@@ -200,6 +226,25 @@ export function Navbar() {
       </nav>
 
       <AlertDialog open={alert.show} onClose={hideAlert} title={alert.title} description={alert.message} />
+
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unsaved Changes</DialogTitle>
+            <DialogDescription>
+              You will lose unsaved changes. Do you want to continue opening a new directory?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelOpenDirectory}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmOpenDirectory}>
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

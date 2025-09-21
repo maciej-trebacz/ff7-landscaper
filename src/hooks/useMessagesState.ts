@@ -5,6 +5,7 @@ import { useStatusBar } from './useStatusBar'
 import { invoke } from "@tauri-apps/api/core"
 import { MesFile } from "@/ff7/mesfile"
 import { useLgpState } from './useLgpState'
+import { useAppState } from './useAppState'
 
 interface MessagesState {
   messages: string[]
@@ -20,6 +21,7 @@ export function useMessagesState() {
   const [state, setState] = useAtom(messagesStateAtom)
   const { setMessage } = useStatusBar()
   const { getFile, setFile } = useLgpState()
+  const { markUnsavedChanges, clearUnsavedChanges } = useAppState()
   const timeoutRef = React.useRef<number>()
 
   const debouncedSync = React.useMemo(
@@ -72,6 +74,7 @@ export function useMessagesState() {
       const newData = mesFile.writeMessages()
       await setFile("mes", newData)
       setMessage("Messages saved successfully")
+      clearUnsavedChanges()
     } catch (error) {
       console.error("[Messages] Failed to save messages:", error)
       setMessage("Failed to save messages: " + (error as Error).message, true)
@@ -79,6 +82,10 @@ export function useMessagesState() {
   }
 
   const updateMessage = (index: number, value: string) => {
+    if (state.messages[index] === value) {
+      return
+    }
+
     setState(prev => {
       const newMessages = prev.messages.map((msg, i) => i === index ? value : msg)
       debouncedSync(newMessages)
@@ -87,6 +94,7 @@ export function useMessagesState() {
         messages: newMessages
       }
     })
+    markUnsavedChanges()
   }
 
   const syncMessages = async (messages: string[]) => {
@@ -105,9 +113,14 @@ export function useMessagesState() {
         messages: newMessages
       }
     })
+    markUnsavedChanges()
   }
 
   const removeMessage = (index: number) => {
+    if (index < 0 || index >= state.messages.length) {
+      return
+    }
+
     setState(prev => {
       const newMessages = prev.messages.filter((_, i) => i !== index)
       debouncedSync(newMessages)
@@ -116,6 +129,7 @@ export function useMessagesState() {
         messages: newMessages
       }
     })
+    markUnsavedChanges()
   }
 
   React.useEffect(() => {

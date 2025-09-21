@@ -63,7 +63,8 @@ export function ScriptList({ className }: ScriptListProps) {
     isSearching,
     setSelectedMap,
     setScriptType: setScriptTypeHook,
-    loadScripts
+    loadScripts,
+    isScriptModified
   } = useScriptsState()
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const selectedItemRef = useRef<HTMLButtonElement | null>(null)
@@ -195,7 +196,10 @@ export function ScriptList({ className }: ScriptListProps) {
                         <Button
                           key={`${result.mapId}-${getScriptKey(result.script)}`}
                           variant="ghost"
-                          className="w-full justify-start h-7 text-xs px-2"
+                          className={cn(
+                            "w-full justify-start h-7 text-xs px-2",
+                            isScriptModified(result.script) && "text-yellow-400"
+                          )}
                           onClick={() => handleSearchResultClick(result)}
                         >
                           <div className="flex items-center justify-between w-full">
@@ -238,7 +242,10 @@ export function ScriptList({ className }: ScriptListProps) {
                 <Button
                   key={getScriptKey(script)}
                   variant={isScriptSelected(script) ? "secondary" : "ghost"}
-                  className="w-full justify-start h-7 text-xs px-2"
+                  className={cn(
+                    "w-full justify-start h-7 text-xs px-2",
+                    isScriptModified(script) && "text-yellow-400"
+                  )}
                   ref={isScriptSelected(script) ? selectedItemRef : undefined}
                   onClick={() => selectScript(script)}
                 >
