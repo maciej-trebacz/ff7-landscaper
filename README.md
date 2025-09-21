@@ -8,9 +8,9 @@
 
 * [x] in system_13 there's a wrong type coercion (2nd param is angle offset, not model id):
 * [x] Entity.rotate_to_model(Entities.wild_chocobo, Entities.cloud) also this should use the direction component
-* [ ] Export mode - it should always reset the camera roll/pitch and show the map grid
-* [ ] Export mode - exporting underwater and glacier maps results in messed up textures (tries to use overworld textures)
-* [ ] Import with normals - missing texture data
+* [x] Export mode - it should always reset the camera roll/pitch and show the map grid
+* [x] Export mode - exporting underwater and glacier maps results in messed up textures (tries to use overworld textures) 
+* [x] Import with normals - missing texture data
 * [x] Add "Open Script" button next to Script ID in the Triangle sidebar
 * [x] "Go to script" button for messages
 * [ ] Text preview & autosizing for messages

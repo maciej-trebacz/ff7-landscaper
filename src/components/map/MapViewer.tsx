@@ -250,6 +250,36 @@ function MapViewer({
     }
   }, [mapType, mapId]);
 
+  // Ensure top-down, unskewed view when entering export mode with orthographic camera
+  useEffect(() => {
+    if (mode === 'export' && cameraType === 'orthographic' && mapDimensions.width) {
+      const timer = setTimeout(() => {
+        const orthoCam = orthographicCameraRef.current;
+        const controls = controlsRef.current;
+        if (orthoCam && controls) {
+          const target = controls.target.clone();
+          const preservedZoom = orthoCam.zoom;
+
+          // Reposition camera directly above target and reset roll/pitch/yaw
+          orthoCam.position.set(target.x, orthoCam.position.y, target.z);
+          orthoCam.up.set(0, 0, -1);
+          orthoCam.lookAt(target);
+          orthoCam.zoom = preservedZoom;
+          orthoCam.updateProjectionMatrix();
+
+          controls.object = orthoCam;
+          controls.target.copy(target);
+          controls.update();
+
+          cameraStateRef.current.position.copy(orthoCam.position);
+          cameraStateRef.current.target.copy(target);
+          cameraStateRef.current.zoom = preservedZoom;
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [mode, cameraType, mapDimensions.width]);
+
   const orthoBase = useMemo(() => ({
     position: [
       mapDimensions.center.x,
@@ -277,6 +307,9 @@ function MapViewer({
   }
 
   const isLoading = externalIsLoading;
+
+  // Grid should be visible in export mode regardless of toggle state
+  const shouldShowGrid = showGrid || mode === 'export';
 
   return (
     <div className="relative flex flex-col w-full h-full">
@@ -362,14 +395,14 @@ function MapViewer({
             }}
           />
           {worldmap && !isLoading && (
-            <WorldMesh 
-              renderingMode={localRenderingMode} 
+            <WorldMesh
+              renderingMode={localRenderingMode}
               onTriangleSelect={handleTriangleSelect}
               selectedFaceIndex={selectedFaceIndex}
               debugCanvasRef={debugCanvasRef}
               mapCenter={mapDimensions.center}
               rotation={rotation}
-              showGrid={showGrid}
+              showGrid={shouldShowGrid}
               wireframe={wireframe}
               showNormals={showNormals}
               cameraHeight={camera?.position.y}

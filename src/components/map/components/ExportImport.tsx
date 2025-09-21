@@ -302,7 +302,7 @@ export function ExportImport() {
     );
   }
 
-  const generateMtlContent = () => {
+  const generateMtlContent = (mapType?: string) => {
     let mtlContent = '# FF7 World Map Material\n\n';
     mtlContent += 'newmtl ff7_terrain\n';
     mtlContent += 'Ka 1.000 1.000 1.000\n';  // Ambient color
@@ -310,7 +310,8 @@ export function ExportImport() {
     mtlContent += 'Ks 0.000 0.000 0.000\n';  // Specular color
     mtlContent += 'd 1.0\n';                 // Opacity
     mtlContent += 'illum 1\n';               // Illumination model
-    mtlContent += 'map_Kd texture_atlas.png\n'; // Diffuse texture map
+    const textureAtlasName = mapType ? `texture_atlas_${mapType}.png` : 'texture_atlas.png';
+    mtlContent += `map_Kd ${textureAtlasName}\n`; // Diffuse texture map
     return mtlContent;
   };
 
@@ -395,27 +396,27 @@ export function ExportImport() {
   };
 
   const handleExportSection = () => {
-    if (!worldmap || !canvas) return;
-    
+    if (!worldmap || !canvas || !mapType) return;
+
     const mesh = worldmap[selectedCell.row][selectedCell.column];
     let objContent = '# FF7 World Map Section Export\n';
     objContent += `# Row: ${selectedCell.row}, Column: ${selectedCell.column}\n\n`;
-    objContent += 'mtllib section.mtl\n\n';
+    objContent += `mtllib section_${mapType}.mtl\n\n`;
     objContent += 'usemtl ff7_terrain\n\n';
     objContent += generateObjContent(mesh).content;
-    const mtlContent = generateMtlContent();
-    
+    const mtlContent = generateMtlContent(mapType);
+
     // Create blobs and trigger downloads
     const objBlob = new Blob([objContent], { type: 'text/plain' });
     const mtlBlob = new Blob([mtlContent], { type: 'text/plain' });
-    
+
     // Export texture atlas as PNG
     canvas.toBlob((textureBlob) => {
       if (textureBlob) {
         const textureUrl = URL.createObjectURL(textureBlob);
         const textureLink = document.createElement('a');
         textureLink.href = textureUrl;
-        textureLink.download = 'texture_atlas.png';
+        textureLink.download = `texture_atlas_${mapType}.png`;
         document.body.appendChild(textureLink);
         textureLink.click();
         document.body.removeChild(textureLink);
@@ -427,7 +428,7 @@ export function ExportImport() {
     const objUrl = URL.createObjectURL(objBlob);
     const objLink = document.createElement('a');
     objLink.href = objUrl;
-    objLink.download = `section_r${selectedCell.row}_c${selectedCell.column}.obj`;
+    objLink.download = `section_${mapType}_r${selectedCell.row}_c${selectedCell.column}.obj`;
     document.body.appendChild(objLink);
     objLink.click();
     document.body.removeChild(objLink);
@@ -437,7 +438,7 @@ export function ExportImport() {
     const mtlUrl = URL.createObjectURL(mtlBlob);
     const mtlLink = document.createElement('a');
     mtlLink.href = mtlUrl;
-    mtlLink.download = 'section.mtl';
+    mtlLink.download = `section_${mapType}.mtl`;
     document.body.appendChild(mtlLink);
     mtlLink.click();
     document.body.removeChild(mtlLink);
@@ -445,10 +446,10 @@ export function ExportImport() {
   };
 
   const handleExportFullMap = () => {
-    if (!worldmap || !canvas) return;
+    if (!worldmap || !canvas || !mapType) return;
 
     let objContent = '# FF7 World Map Full Export\n\n';
-    objContent += 'mtllib worldmap.mtl\n\n';
+    objContent += `mtllib worldmap_${mapType}.mtl\n\n`;
     objContent += 'usemtl ff7_terrain\n\n';
 
     let baseVertexIndex = 0;
@@ -476,19 +477,19 @@ export function ExportImport() {
       }
     }
 
-    const mtlContent = generateMtlContent();
-    
+    const mtlContent = generateMtlContent(mapType);
+
     // Create blobs and trigger downloads
     const objBlob = new Blob([objContent], { type: 'text/plain' });
     const mtlBlob = new Blob([mtlContent], { type: 'text/plain' });
-    
+
     // Export texture atlas as PNG
     canvas.toBlob((textureBlob) => {
       if (textureBlob) {
         const textureUrl = URL.createObjectURL(textureBlob);
         const textureLink = document.createElement('a');
         textureLink.href = textureUrl;
-        textureLink.download = 'texture_atlas.png';
+        textureLink.download = `texture_atlas_${mapType}.png`;
         document.body.appendChild(textureLink);
         textureLink.click();
         document.body.removeChild(textureLink);
@@ -500,7 +501,7 @@ export function ExportImport() {
     const objUrl = URL.createObjectURL(objBlob);
     const objLink = document.createElement('a');
     objLink.href = objUrl;
-    objLink.download = 'worldmap_full.obj';
+    objLink.download = `worldmap_${mapType}_full.obj`;
     document.body.appendChild(objLink);
     objLink.click();
     document.body.removeChild(objLink);
@@ -510,7 +511,7 @@ export function ExportImport() {
     const mtlUrl = URL.createObjectURL(mtlBlob);
     const mtlLink = document.createElement('a');
     mtlLink.href = mtlUrl;
-    mtlLink.download = 'worldmap.mtl';
+    mtlLink.download = `worldmap_${mapType}.mtl`;
     document.body.appendChild(mtlLink);
     mtlLink.click();
     document.body.removeChild(mtlLink);
