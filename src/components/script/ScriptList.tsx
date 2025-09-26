@@ -3,10 +3,12 @@ import { useScriptsState } from "@/hooks/useScriptState"
 import { Button } from "@/components/ui/button"
 import { FF7Function, FunctionType } from "@/ff7/evfile"
 import { modelsMapping, systemScriptNames, modelScriptNames } from "@/ff7/worldscript/constants"
-import { Plus } from "lucide-react"
+import { Plus, Map } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { AddScriptModal } from "@/components/modals/AddScriptModal"
 import { MapId, MAP_NAMES } from "@/hooks/useMapState"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { MapPicker } from "@/components/map/MapPicker"
 
 interface ScriptListProps {
   className?: string
@@ -67,6 +69,7 @@ export function ScriptList({ className }: ScriptListProps) {
     isScriptModified
   } = useScriptsState()
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isMapPickerOpen, setIsMapPickerOpen] = useState(false)
   const selectedItemRef = useRef<HTMLButtonElement | null>(null)
 
   // Filter and sort scripts
@@ -229,9 +232,16 @@ export function ScriptList({ className }: ScriptListProps) {
               Available Scripts ({filteredScripts.length})
             </div>
             {canAddScripts && (
-              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setIsAddModalOpen(true)}>
-                <Plus className="h-3 w-3" />
-              </Button>
+              <div className="flex gap-1">
+                {scriptType === FunctionType.Mesh && (
+                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setIsMapPickerOpen(true)}>
+                    <Map className="h-3 w-3" />
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setIsAddModalOpen(true)}>
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
             )}
           </div>
           <div className="space-y-1">
@@ -275,6 +285,33 @@ export function ScriptList({ className }: ScriptListProps) {
         scriptType={scriptType}
         onAddScript={handleAddScript}
       />
+
+      <Dialog
+        open={isMapPickerOpen}
+        onOpenChange={(o) => {
+          setIsMapPickerOpen(o)
+        }}
+      >
+        <DialogContent className="max-w-[900px] p-0">
+          <DialogHeader className="px-4 pt-4">
+            <DialogTitle className="text-base">Pick Mesh Coordinates</DialogTitle>
+          </DialogHeader>
+          <div className="h-[560px] w-[900px]">
+            <MapPicker
+              onPickCell={(mx, mz) => {
+                // Find the first mesh script that matches the selected coordinates
+                const matchingScript = filteredScripts.find(
+                  (script) => script.type === FunctionType.Mesh && script.x === mz && script.y === mx
+                )
+                if (matchingScript) {
+                  selectScript(matchingScript)
+                }
+                setIsMapPickerOpen(false)
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
