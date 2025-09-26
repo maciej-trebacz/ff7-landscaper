@@ -944,7 +944,8 @@ export class Worldscript {
   private generateExpression(expr: Expression): Instruction[] {
     switch (expr.type) {
       case 'Literal':
-        return [{ type: 'instruction', mnemonic: 'PUSH_CONSTANT', codeParams: [this.numberToHexString(expr.value)] }];
+        const value = typeof expr.value === 'boolean' ? (expr.value ? 1 : 0) : expr.value;
+        return [{ type: 'instruction', mnemonic: 'PUSH_CONSTANT', codeParams: [this.numberToHexString(value)] }];
       case 'Identifier':
         throw new Error('Bare identifiers are not supported in expressions.');
       case 'Member':

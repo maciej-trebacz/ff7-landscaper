@@ -3,7 +3,7 @@ import { useScriptsState } from "@/hooks/useScriptState"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FunctionType, FF7Function, SystemFunction, ModelFunction, MeshFunction } from "@/ff7/evfile"
+import { FunctionType, FF7Function } from "@/ff7/evfile"
 import { OpcodesEditor } from "@/components/script/OpcodesEditor"
 import {
   WorldscriptEditor,
@@ -49,7 +49,6 @@ export function ScriptEditor({
   const [isDecompiling, setIsDecompiling] = useState(false)
   const effectiveDecompiled = decompiled || globalDecompiled
   const localEditorHandleRef = useRef<WorldscriptEditorHandle | null>(null)
-  const [editorReady, setEditorReady] = useState(false)
 
   // (moved below once content is available)
 
@@ -295,7 +294,6 @@ export function ScriptEditor({
                   } else {
                     localEditorHandleRef.current = instance
                   }
-                  setEditorReady(true)
                 }}
                 className="h-full"
               />

@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useEncountersState } from '@/hooks/useEncountersState'
-import { useAppState } from '@/hooks/useAppState'
 import { TRIANGLE_TYPES, REGION_NAMES } from '@/lib/map-data'
 
 interface TerrainRegionsDialogProps {

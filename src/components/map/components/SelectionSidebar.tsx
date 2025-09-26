@@ -1,4 +1,3 @@
-import { Triangle } from "@/ff7/mapfile";
 import { TriangleWithVertices } from "@/components/map/types";
 import { SelectedTriangle } from "./SelectedTriangle";
 

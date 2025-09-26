@@ -22,7 +22,7 @@ import { useEffect, useRef } from "react"
 
 export function Navbar() {
   const { setMessage } = useStatusBar()
-  const { alert, showAlert, hideAlert, setDataPath, setLoading, setLoadingStep, unsavedChanges } = useAppState()
+  const { alert, showAlert, hideAlert, setDataPath, setLoading, unsavedChanges } = useAppState()
   const { saveMessages, loadMessages } = useMessagesState()
   const { saveMap, loadMap, loadTextures, mapType, loaded, loadedTextures } = useMapState()
   const { saveScripts, loadScripts } = useScriptsState()

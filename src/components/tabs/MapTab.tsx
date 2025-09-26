@@ -1,4 +1,3 @@
-import { Triangle } from "@/ff7/mapfile";
 import { TriangleWithVertices } from "@/components/map/types";
 import { MapType, MapMode, useMapState } from "@/hooks/useMapState";
 import { useEffect, useState, useCallback } from "react";
@@ -8,17 +7,10 @@ import { ExportImportSidebar } from "@/components/map/components/ExportImportSid
 import { PaintingSidebar } from "@/components/map/components/PaintingSidebar";
 import { GridSelectionProvider } from '@/contexts/GridSelectionContext';
 
-type MapId = "WM0" | "WM2" | "WM3";
 type RenderingMode = "terrain" | "textured" | "region" | "scripts";
 
-const MAP_ID_BY_TYPE: Record<MapType, MapId> = {
-  overworld: "WM0",
-  underwater: "WM2",
-  glacier: "WM3"
-};
-
 export function MapTab() {
-  const { textures, worldmap, mapType: currentMapType, mode, setMode, enabledAlternatives, setEnabledAlternatives, loaded, setMapType } = useMapState();
+  const { textures, mode, setMode, enabledAlternatives, setEnabledAlternatives, loaded, setMapType } = useMapState();
 
   const [selectedTriangle, setSelectedTriangle] = useState<TriangleWithVertices | null>(null);
   const [renderingMode, setRenderingMode] = useState<RenderingMode>("terrain");
