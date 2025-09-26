@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react"
 import { Label } from "@/components/ui/label"
 import type { CallContext } from "@/components/script/types"
 import { Description } from "@/components/script/Description"
+import { Button } from "@/components/ui/button"
+import { useMessagesState } from "@/hooks/useMessagesState"
+import { FFTextAutosizer } from "@/ff7/fftext"
 
 export function SetDimensionsUI({
   ctx,
@@ -47,6 +50,65 @@ export function SetDimensionsUI({
   }, [])
   const scale = Math.max(0.1, Math.min(2, containerWidth > 0 ? containerWidth / SCREEN_W : 1))
   scaleRef.current = scale
+
+  const { messages } = useMessagesState()
+
+  const autosize = () => {
+    const editorHandle = (ctx as any)?.editor as
+      | import("@/components/script/WorldscriptEditor").WorldscriptEditorHandle
+      | null
+      | undefined
+
+    if (!editorHandle || typeof ctx.row !== "number") return
+
+    // Find next Window.set_message or Window.set_prompt line
+    const lineCount = editorHandle.getLineCount?.() ?? 0
+    let messageId: number | null = null
+
+    for (let r = ctx.row + 1; r < lineCount; r++) {
+      const line = editorHandle.getLine?.(r) ?? ""
+      const messageMatch = line.match(/\bWindow\.set_message\s*\(\s*(\d+)/)
+      const promptMatch = line.match(/\bWindow\.set_prompt\s*\(\s*(\d+)/)
+
+      if (messageMatch) {
+        messageId = parseInt(messageMatch[1], 10)
+        break
+      } else if (promptMatch) {
+        messageId = parseInt(promptMatch[1], 10)
+        break
+      }
+    }
+
+    if (messageId === null || !Number.isFinite(messageId)) return
+
+    // Get message text
+    const messageText = messages[messageId]
+    if (!messageText) return
+
+    // Measure text dimensions
+    const autosizer = new FFTextAutosizer()
+    const { width, height } = autosizer.measure(messageText)
+
+    // Calculate new dimensions (ensure they fit within screen bounds)
+    let newX = x
+    let newY = y
+    let newW = Math.max(1, width)
+    let newH = Math.max(1, height)
+
+    // Adjust position if needed to fit within 320x240 screen
+    if (newX + newW > SCREEN_W) {
+      newX = SCREEN_W - newW
+    }
+    if (newY + newH > SCREEN_H) {
+      newY = SCREEN_H - newH
+    }
+
+    // Ensure X and Y are within bounds
+    newX = clamp(newX, 0, SCREEN_W - newW)
+    newY = clamp(newY, 0, SCREEN_H - newH)
+
+    commit(newX, newY, newW, newH)
+  }
 
   const commit = (nx: number, ny: number, nw: number, nh: number) => {
     const clampedX = clamp(Math.round(nx), 0, SCREEN_W - 1)
@@ -212,6 +274,15 @@ export function SetDimensionsUI({
           </div>
         </div>
       </div>
+
+      <Button
+        size="sm"
+        variant="outline"
+        className="w-full text-xs"
+        onClick={autosize}
+      >
+        Autosize to Message
+      </Button>
     </div>
   )
 }

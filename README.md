@@ -13,7 +13,8 @@
 * [x] Import with normals - missing texture data
 * [x] Add "Open Script" button next to Script ID in the Triangle sidebar
 * [x] "Go to script" button for messages
-* [ ] Text preview & autosizing for messages
+* [x] Text preview & autosizing for messages
+* [ ] Autosizing does not work correctly when custom codes are used (e.g. colors)
 * [x] Adding / removing messages
 * [ ] Battle ID picker (from Ultima)
 

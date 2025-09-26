@@ -218,7 +218,7 @@ export class FFTextAutosizer {
       max = 26,
       padding = 16,
       rowH1 = 16,
-      rowH2 = 25,
+      rowH2 = 9,
     } = opts;
 
     // Build spacing table (0..255): (val & 0x1F) + floor(val / 0x20)
@@ -227,6 +227,7 @@ export class FFTextAutosizer {
       : FFTextAutosizer.defaultFontSpacing();
 
     const spacing: SpacingTable = baseGlyphWidths.map((v) => ((v & 0x1f) + Math.floor(v / 0x20)) | 0);
+    console.log("spacing", spacing);
 
     // Set special entries matching touphScript getSpacingTable()
     // choice (0xE0) and tab (0xE1) are counts, used with width of space or max/2 in MAX mode
@@ -253,6 +254,7 @@ export class FFTextAutosizer {
   /** Measure returns {width, height} in pixels for the given ASCII text. */
   measure(text: string): { width: number; height: number } {
     const codes = this.toCodes(text);
+    debugger;
     const width = this.widthFromCodes(codes);
     const height = this.heightFromCodes(codes);
     return { width, height };
@@ -346,10 +348,10 @@ export class FFTextAutosizer {
     return nh * this.rowH1 + this.rowH2;
   }
 
-  // Default font spacing (256 hex values) copied from touphScript.ini
+  // Default font spacing (256 hex values) copied from the game
   private static defaultFontSpacing(): number[] {
     return FFTextAutosizer.parseFontSpacingHex(
-      '03 23 05 0A 07 0A 4B 03 05 05 07 07 06 05 03 06 08 06 08 08 08 08 08 08 08 08 03 06 07 08 07 06 0A 09 07 08 08 07 07 08 08 03 06 07 07 0B 08 09 07 09 07 07 07 08 09 0B 08 09 07 04 06 04 07 01 04 07 07 06 07 07 06 07 07 03 04 06 03 0B 07 07 07 07 05 06 06 07 07 0B 07 07 06 05 03 05 08 44 4B 4C 4B 49 4B 09 08 07 49 07 07 07 07 07 07 07 07 07 04 03 04 04 07 07 07 07 07 07 07 07 07 07 06 0A 0A 06 0B 06 07 07 09 2A 4D 04 05 08 0C 09 0B 07 07 0B 0B 09 09 09 09 0B 0B 0B 0B 09 0B 07 06 03 08 07 08 08 09 07 07 09 01 09 09 09 0C 0B 08 0C 06 06 03 03 07 07 07 09 07 09 05 05 0B 0B 08 03 04 06 0D 09 07 09 07 07 03 03 03 03 09 09 08 09 08 08 08 03 06 07 05 06 03 06 05 06 05 05 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01'
+      '03 45 48 0A 07 0A 09 03 48 48 07 07 27 05 26 06 08 47 08 08 08 08 08 08 08 08 45 04 07 08 07 27 0A 09 07 08 08 07 07 08 08 03 06 07 07 0B 08 09 07 09 07 07 07 08 09 0B 08 09 07 04 06 04 07 08 04 07 07 06 07 07 06 07 07 03 04 06 03 0B 07 07 07 07 05 06 06 07 07 0B 07 07 06 05 03 05 08 44 4B 4C 4B 49 4B 09 08 07 49 07 07 07 07 07 07 07 07 07 04 03 04 04 07 07 07 07 07 07 07 07 07 07 0B 06 07 08 0B 06 07 07 09 2A 4D 04 05 08 0C 09 0B 07 07 07 09 07 07 07 09 08 04 06 06 09 0B 07 06 03 08 07 08 08 09 07 07 09 01 09 09 09 0C 0B 08 0C 06 06 04 04 07 07 07 09 07 09 05 05 07 07 08 03 04 06 0D 09 07 09 07 07 03 03 03 03 09 09 08 09 08 08 08 03 06 07 05 06 03 06 05 06 05 05 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01'
     );
   }
 

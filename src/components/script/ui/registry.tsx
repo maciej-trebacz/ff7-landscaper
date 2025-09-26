@@ -8,6 +8,7 @@ import { EntityModelSelectUI } from "@/components/script/ui/EntityModelSelectUI"
 import { EntityRotateToModelUI } from "@/components/script/ui/EntityRotateToModelUI"
 import { SetMessageUI } from "@/components/script/ui/SetMessageUI"
 import { SetDimensionsUI } from "@/components/script/ui/SetDimensionsUI"
+import { SetPromptUI } from "@/components/script/ui/SetPromptUI"
 import { SetMeshCoordsUI } from "@/components/script/ui/SetMeshCoordsUI"
 import { SetCoordsInMeshUI } from "@/components/script/ui/SetCoordsInMeshUI"
 import { CallFunctionUI } from "@/components/script/ui/CallFunctionUI"
@@ -49,6 +50,7 @@ const registry: Record<string, Renderer> = {
   "Entity.rotate_to_model": (ctx, onBatch) => <EntityRotateToModelUI ctx={ctx} onBatch={onBatch} />,
   "Window.set_message": (ctx, onBatch) => <SetMessageUI ctx={ctx} onBatch={onBatch} />,
   "Window.set_dimensions": (ctx, onBatch) => <SetDimensionsUI ctx={ctx} onBatch={onBatch} />,
+  "Window.set_prompt": (ctx, onBatch) => <SetPromptUI ctx={ctx} onBatch={onBatch} />,
   "Entity.set_direction_facing": (ctx, onBatch) => <DirectionRadialUI ctx={ctx} onBatch={onBatch} index={0} />,
   "Entity.set_movement_direction": (ctx, onBatch) => <DirectionRadialUI ctx={ctx} onBatch={onBatch} index={0} />,
   "Entity.set_mesh_coords": (ctx, onBatch) => <SetMeshCoordsUI ctx={ctx} onBatch={onBatch} scope="Entity" />,
