@@ -14,14 +14,6 @@ export function EncountersTab() {
   const [selectedType, setSelectedType] = useState<EncounterType>('random')
   const [isTerrainDialogOpen, setIsTerrainDialogOpen] = useState(false)
 
-  if (!loaded) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
-        Loading encounters...
-      </div>
-    )
-  }
-
   const renderContent = () => {
     switch (selectedType) {
       case 'random':

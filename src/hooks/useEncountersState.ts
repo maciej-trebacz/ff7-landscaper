@@ -177,7 +177,7 @@ export function useEncountersState() {
       const path = `${dataPath}/ff7_en.exe`
       const fileData = await readFile(path)
       const exeFile = new FF7ExeFile(fileData)
-      setState({ ...state, exeFile, exeData: exeFile.data })
+      setState(prev => ({ ...prev, exeFile, exeData: exeFile.data }))
       setMessage('FF7 executable loaded successfully!')
     } catch (error) {
       console.error('[EXE] Failed to load ff7_en.exe', error)

@@ -27,7 +27,7 @@ export function Navbar() {
   const { saveMap, loadMap, loadTextures, mapType, loaded, loadedTextures } = useMapState()
   const { saveScripts, loadScripts } = useScriptsState()
   const { saveLocations, loadLocations } = useLocationsState()
-  const { saveEncounters, loadEncounters } = useEncountersState()
+  const { saveEncounters, loadEncounters, loadExeFile } = useEncountersState()
   const { loadLgp, opened, openedTime } = useLgpState()
   const { resetTextureAtlas } = useTextureAtlas()
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
@@ -97,6 +97,7 @@ export function Navbar() {
 
       setMessage("Loading encounters...")
       await loadEncounters()
+      await loadExeFile()
 
       setMessage("Loading locations...")
       await loadLocations()

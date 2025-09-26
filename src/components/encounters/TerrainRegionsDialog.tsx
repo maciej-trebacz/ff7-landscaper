@@ -10,29 +10,7 @@ interface TerrainRegionsDialogProps {
 }
 
 export function TerrainRegionsDialog({ onClose }: TerrainRegionsDialogProps) {
-  const { exeData, loadExeFile, updateTerrainRegion } = useEncountersState()
-  const { dataPath } = useAppState()
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    // Load the executable file when dialog opens
-    if (!exeData && dataPath) {
-      loadExecutable()
-    }
-  }, [dataPath])
-
-  const loadExecutable = async () => {
-    setLoading(true)
-    try {
-      await loadExeFile()
-    } catch (error) {
-      console.error('Failed to load executable:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-
+  const { exeData, updateTerrainRegion } = useEncountersState()
 
   const handleTerrainChange = (regionIndex: number, terrainIndex: number, newValue: number) => {
     updateTerrainRegion(regionIndex, terrainIndex, newValue)
@@ -44,27 +22,6 @@ export function TerrainRegionsDialog({ onClose }: TerrainRegionsDialogProps) {
       name: terrainInfo?.type || `Unknown (${terrainType})`,
       description: terrainInfo?.description || ''
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-6">
-        <div className="text-xs text-muted-foreground">Loading FF7 executable...</div>
-      </div>
-    )
-  }
-
-  if (!exeData) {
-    return (
-      <div className="flex flex-col items-center justify-center p-6 space-y-3">
-        <div className="text-xs text-muted-foreground text-center">
-          FF7 executable not loaded. Make sure ff7_en.exe is in your game directory.
-        </div>
-        <Button onClick={loadExecutable} size="sm" className="h-7 text-xs px-3">
-          Load Executable
-        </Button>
-      </div>
-    )
   }
 
   return (
