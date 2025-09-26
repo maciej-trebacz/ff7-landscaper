@@ -29,45 +29,77 @@ const ALTERNATIVE_SECTIONS: AlternativeSection[] = [
   { id: 48, name: "Cosmo Canyon crater (right)" },
 ] as const;
 
-interface MapState {
+interface MapTypeData {
   mapId: MapId | null
-  mapType: MapType
-  mode: MapMode
   map: MapFile | null
   worldmap: Mesh[][] | null
   textures: WorldMapTexture[]
-  loadedTextures: Record<MapType, boolean>
   enabledAlternatives: number[]
   changedMeshes: [number, number][]
-  paintingSelectedTriangles: Set<number>
   triangleMap: TriangleWithVertices[] | null
-  selectedTriangle: number | null
   loaded: boolean
   updateColors?: () => void
   updateTriangleTexture?: (triangle: TriangleWithVertices) => void
   updateTriangleNormals?: (triangle: TriangleWithVertices, normal0: { x: number; y: number; z: number }, normal1: { x: number; y: number; z: number }, normal2: { x: number; y: number; z: number }) => void
 }
 
+interface MapState {
+  mapType: MapType
+  mode: MapMode
+  maps: Record<MapType, MapTypeData>
+  loadedTextures: Record<MapType, boolean>
+  paintingSelectedTriangles: Set<number>
+  selectedTriangle: number | null
+}
+
 const mapStateAtom = atom<MapState>({
-  mapId: null,
   mapType: 'overworld',
   mode: 'selection',
-  map: null,
-  worldmap: null,
-  textures: [],
+  maps: {
+    overworld: {
+      mapId: null,
+      map: null,
+      worldmap: null,
+      textures: [],
+      enabledAlternatives: [],
+      changedMeshes: [],
+      triangleMap: null,
+      loaded: false,
+      updateColors: undefined,
+      updateTriangleTexture: undefined,
+    },
+    underwater: {
+      mapId: null,
+      map: null,
+      worldmap: null,
+      textures: [],
+      enabledAlternatives: [],
+      changedMeshes: [],
+      triangleMap: null,
+      loaded: false,
+      updateColors: undefined,
+      updateTriangleTexture: undefined,
+    },
+    glacier: {
+      mapId: null,
+      map: null,
+      worldmap: null,
+      textures: [],
+      enabledAlternatives: [],
+      changedMeshes: [],
+      triangleMap: null,
+      loaded: false,
+      updateColors: undefined,
+      updateTriangleTexture: undefined,
+    },
+  },
   loadedTextures: {
     overworld: false,
     underwater: false,
     glacier: false,
   },
-  enabledAlternatives: [],
-  changedMeshes: [],
   paintingSelectedTriangles: new Set<number>(),
-  triangleMap: null,
   selectedTriangle: null,
-  loaded: false,
-  updateColors: undefined,
-  updateTriangleTexture: undefined,
 })
 
 export const MESHES_IN_ROW = 4;
@@ -96,7 +128,7 @@ export function useMapState() {
     }
   }
 
-  const parseWorldmap = (rawMapData: MapFile, mapType: MapType, enabledAlternatives: number[], onlyRefresh?: number) => {
+  const parseWorldmap = (rawMapData: MapFile, mapType: MapType, enabledAlternatives: number[]) => {
     if (!rawMapData) return null;
 
     console.time("[Map] Parsing worldmap")
@@ -115,11 +147,7 @@ export function useMapState() {
         if (ALTERNATIVE_SECTIONS.some(alt => alt.id === sectionIdx && enabledAlternatives.includes(alt.id))) {
           trueSectionIdx = 63 + ALTERNATIVE_SECTIONS.findIndex(alt => alt.id === sectionIdx);
         }
-        if (!onlyRefresh || sectionIdx === onlyRefresh) {
-          rowData.push(rawMapData.readMesh(trueSectionIdx, meshIdx));
-        } else {
-          rowData.push(state.worldmap?.[row]?.[column]);
-        }
+        rowData.push(rawMapData.readMesh(trueSectionIdx, meshIdx));
       }
       data.push(rowData);
     }
@@ -152,8 +180,13 @@ export function useMapState() {
 
     setState(prev => ({
       ...prev,
-      textures,
-      mapType,
+      maps: {
+        ...prev.maps,
+        [mapType]: {
+          ...prev.maps[mapType],
+          textures,
+        }
+      },
       loadedTextures: { ...prev.loadedTextures, [mapType]: true }
     }))
     return textures
@@ -170,18 +203,42 @@ export function useMapState() {
 
     const mapData = new MapFile(fileData)
     console.debug("[Map] Map data", mapData)
-    const worldmapData = parseWorldmap(mapData, mapType, state.enabledAlternatives)
+    const worldmapData = parseWorldmap(mapData, mapType, []) // Start with no alternatives enabled for initial load
 
     console.debug("[Map] Worldmap data", worldmapData)
 
-    setState(prev => ({ ...prev, mapId, mapType, map: mapData, worldmap: worldmapData, loaded: true }))
+    setState(prev => ({
+      ...prev,
+      mapType,
+      maps: {
+        ...prev.maps,
+        [mapType]: {
+          ...prev.maps[mapType],
+          mapId,
+          map: mapData,
+          worldmap: worldmapData,
+          loaded: true
+        }
+      }
+    }))
     return mapData
   }
 
-  const setEnabledAlternatives = (alternatives: number[], changed?: AlternativeSection) => {
+  const setEnabledAlternatives = (alternatives: number[], _changed?: AlternativeSection) => {
     setState(prev => {
-      const worldmapData = prev.map ? parseWorldmap(prev.map, prev.mapType, alternatives, changed?.id) : null;
-      return { ...prev, enabledAlternatives: alternatives, worldmap: worldmapData };
+      const currentMapData = prev.maps[prev.mapType];
+      const worldmapData = currentMapData.map ? parseWorldmap(currentMapData.map, prev.mapType, alternatives) : null;
+      return {
+        ...prev,
+        maps: {
+          ...prev.maps,
+          [prev.mapType]: {
+            ...currentMapData,
+            enabledAlternatives: alternatives,
+            worldmap: worldmapData
+          }
+        }
+      };
     });
     markUnsavedChanges()
   }
@@ -191,24 +248,24 @@ export function useMapState() {
     setState(prev => ({
       ...prev,
       mapType,
-      // Clear current world data so UI knows to wait for Navbar to load
-      worldmap: null,
-      triangleMap: null,
-      selectedTriangle: null,
-      changedMeshes: [],
-      textures: [],
-      loaded: false,
     }))
   }, [setState])
 
   const addChangedMesh = useCallback((row: number, col: number) => {
     setState(prev => {
+      const currentMapData = prev.maps[prev.mapType];
       const newMesh = [row, col] as [number, number];
-      const exists = prev.changedMeshes.some(([r, c]) => r === row && c === col);
+      const exists = currentMapData.changedMeshes.some(([r, c]) => r === row && c === col);
       if (!exists) {
         return {
           ...prev,
-          changedMeshes: [...prev.changedMeshes, newMesh]
+          maps: {
+            ...prev.maps,
+            [prev.mapType]: {
+              ...currentMapData,
+              changedMeshes: [...currentMapData.changedMeshes, newMesh]
+            }
+          }
         };
       }
       return prev;
@@ -217,29 +274,30 @@ export function useMapState() {
   }, [setState, markUnsavedChanges]);
 
   const saveMap = async () => {
-    if (!state.map) return;
+    const currentMapData = state.maps[state.mapType];
+    if (!currentMapData.map) return;
 
-    console.debug(`Changed ${state.changedMeshes.length} meshes`, state.changedMeshes)
+    console.debug(`Changed ${currentMapData.changedMeshes.length} meshes`, currentMapData.changedMeshes)
     console.time("[Map] Saving map")
-    state.changedMeshes.forEach(mesh => {
+    currentMapData.changedMeshes.forEach(mesh => {
       const [row, col] = mesh
       const sectionIdx = Math.floor(row / MESHES_IN_ROW) * dimensions[state.mapType as keyof typeof dimensions].horizontal + Math.floor(col / MESHES_IN_COLUMN);
       const meshIdx = (row % MESHES_IN_ROW) * MESHES_IN_COLUMN + (col % MESHES_IN_COLUMN);
-      state.map.writeMesh(sectionIdx, meshIdx, state.worldmap[row][col])
+      currentMapData.map!.writeMesh(sectionIdx, meshIdx, currentMapData.worldmap![row][col])
     })
 
     // for (let row = 0; row < dimensions[state.mapType as keyof typeof dimensions].vertical * MESHES_IN_ROW; row++) {
     //   for (let col = 0; col < dimensions[state.mapType as keyof typeof dimensions].horizontal * MESHES_IN_COLUMN; col++) {
     //     const sectionIdx = Math.floor(row / MESHES_IN_ROW) * dimensions[state.mapType as keyof typeof dimensions].horizontal + Math.floor(col / MESHES_IN_COLUMN);
     //     const meshIdx = (row % MESHES_IN_ROW) * MESHES_IN_COLUMN + (col % MESHES_IN_COLUMN);
-    //     state.map.writeMesh(sectionIdx, meshIdx, state.worldmap[row][col])
+    //     currentMapData.map.writeMesh(sectionIdx, meshIdx, currentMapData.worldmap[row][col])
     //   }
     // }
 
-    const path = `${dataPath}/data/wm/${state.mapId}`
-    const mapData = state.map.writeMap()
+    const path = `${dataPath}/data/wm/${currentMapData.mapId}`
+    const mapData = currentMapData.map.writeMap()
     await writeFile(path + '.MAP', mapData)
-    const botData = state.map.writeBot()
+    const botData = currentMapData.map.writeBot()
     await writeFile(path + '.BOT', botData)
     console.timeEnd("[Map] Saving map")
     clearUnsavedChanges()
@@ -314,14 +372,14 @@ export function useMapState() {
     if (updates.normal2 !== undefined) triangle.trianglePtr.normal2 = updates.normal2;
 
     if (updates.texture !== undefined || updates.uVertex0 !== undefined || updates.vVertex0 !== undefined || updates.uVertex1 !== undefined || updates.vVertex1 !== undefined || updates.uVertex2 !== undefined || updates.vVertex2 !== undefined) {
-      if (state.updateTriangleTexture) {
-        state.updateTriangleTexture(triangle);
+      if (currentMapData.updateTriangleTexture) {
+        currentMapData.updateTriangleTexture(triangle);
       }
     }
 
     if (updates.normal0 !== undefined || updates.normal1 !== undefined || updates.normal2 !== undefined) {
-      if (state.updateTriangleNormals) {
-        state.updateTriangleNormals(triangle, updates.normal0, updates.normal1, updates.normal2);
+      if (currentMapData.updateTriangleNormals) {
+        currentMapData.updateTriangleNormals(triangle, updates.normal0, updates.normal1, updates.normal2);
       }
     }
 
@@ -333,7 +391,8 @@ export function useMapState() {
 
   const updateSelectedTriangles = (updates: TriangleUpdates) => {
     setState(prev => {
-      if (!prev.worldmap || !prev.triangleMap) return prev;
+      const currentMapData = prev.maps[prev.mapType];
+      if (!currentMapData.worldmap || !currentMapData.triangleMap) return prev;
 
       // Track which meshes were modified
       const modifiedMeshes = new Set<string>();
@@ -342,9 +401,9 @@ export function useMapState() {
 
       // Update each selected triangle
       prev.paintingSelectedTriangles.forEach(faceIndex => {
-        const triangle = prev.triangleMap![faceIndex];
+        const triangle = currentMapData.triangleMap![faceIndex];
         console.debug("[Map] Updating triangle", triangle)
-        
+
         const [row, col] = updateTriangle(triangle, updates);
         if (row >= 0 && col >= 0) {
           modifiedMeshes.add(`${row},${col}`);
@@ -352,23 +411,29 @@ export function useMapState() {
       });
 
       // Add all modified meshes to changedMeshes
-      const newChangedMeshes = [...prev.changedMeshes];
+      const newChangedMeshes = [...currentMapData.changedMeshes];
       modifiedMeshes.forEach(key => {
         const [row, col] = key.split(',').map(Number);
-        if (!prev.changedMeshes.some(([r, c]) => r === row && c === col)) {
+        if (!currentMapData.changedMeshes.some(([r, c]) => r === row && c === col)) {
           newChangedMeshes.push([row, col]);
         }
       });
 
       // Update the colors in the geometry
-      if (prev.updateColors) {
-        prev.updateColors();
+      if (currentMapData.updateColors) {
+        currentMapData.updateColors();
       }
 
       return {
         ...prev,
-        changedMeshes: newChangedMeshes,
-        triangleMap: [...prev.triangleMap] // Create new array to trigger re-render
+        maps: {
+          ...prev.maps,
+          [prev.mapType]: {
+            ...currentMapData,
+            changedMeshes: newChangedMeshes,
+            triangleMap: [...currentMapData.triangleMap] // Create new array to trigger re-render
+          }
+        }
       };
     });
     markUnsavedChanges()
@@ -376,9 +441,10 @@ export function useMapState() {
 
   const updateSingleTriangle = (updates: TriangleUpdates) => {
     setState(prev => {
-      if (!prev.worldmap || !prev.triangleMap || prev.selectedTriangle === null) return prev;
+      const currentMapData = prev.maps[prev.mapType];
+      if (!currentMapData.worldmap || !currentMapData.triangleMap || prev.selectedTriangle === null) return prev;
 
-      const triangle = prev.triangleMap[prev.selectedTriangle];
+      const triangle = currentMapData.triangleMap[prev.selectedTriangle];
       if (!triangle) {
         console.warn(`[Map] Triangle with index ${prev.selectedTriangle} not found`);
         return prev;
@@ -388,44 +454,69 @@ export function useMapState() {
 
       // Update the triangle and get its mesh coordinates
       const [row, col] = updateTriangle(triangle, updates);
-      
+
       // Add the modified mesh to changedMeshes if it's not already there
-      const newChangedMeshes = [...prev.changedMeshes];
-      if (row >= 0 && col >= 0 && !prev.changedMeshes.some(([r, c]) => r === row && c === col)) {
+      const newChangedMeshes = [...currentMapData.changedMeshes];
+      if (row >= 0 && col >= 0 && !currentMapData.changedMeshes.some(([r, c]) => r === row && c === col)) {
         newChangedMeshes.push([row, col]);
       }
 
       // Update the colors in the geometry
-      if (prev.updateColors) {
-        prev.updateColors();
+      if (currentMapData.updateColors) {
+        currentMapData.updateColors();
       }
 
       return {
         ...prev,
-        changedMeshes: newChangedMeshes,
-        triangleMap: [...prev.triangleMap] // Create new array to trigger re-render
+        maps: {
+          ...prev.maps,
+          [prev.mapType]: {
+            ...currentMapData,
+            changedMeshes: newChangedMeshes,
+            triangleMap: [...currentMapData.triangleMap] // Create new array to trigger re-render
+          }
+        }
       };
     });
     markUnsavedChanges()
   };
 
   const setTriangleMap = useCallback((triangleMap: TriangleWithVertices[], updateColors?: () => void, updateTriangleTexture?: (triangle: TriangleWithVertices) => void, updateTriangleNormals?: (triangle: TriangleWithVertices, normal0: { x: number; y: number; z: number }, normal1: { x: number; y: number; z: number }, normal2: { x: number; y: number; z: number }) => void) => {
-    setState(prev => ({ ...prev, triangleMap, updateColors, updateTriangleTexture, updateTriangleNormals }));
+    setState(prev => ({
+      ...prev,
+      maps: {
+        ...prev.maps,
+        [prev.mapType]: {
+          ...prev.maps[prev.mapType],
+          triangleMap,
+          updateColors,
+          updateTriangleTexture,
+          updateTriangleNormals
+        }
+      }
+    }));
   }, [setState]);
 
   // Added updateSectionMesh: updates a single mesh in the worldmap and tracks it as changed
   const updateSectionMesh = (row: number, col: number, newMesh: Mesh) => {
     console.log(`updateSectionMesh called for row=${row}, col=${col} with mesh:`, newMesh);
     setState(prev => {
-      if (!prev.worldmap) return prev;
-      const newWorldmap = [...prev.worldmap];
+      const currentMapData = prev.maps[prev.mapType];
+      if (!currentMapData.worldmap) return prev;
+      const newWorldmap = [...currentMapData.worldmap];
       newWorldmap[row] = [...newWorldmap[row]];
       newWorldmap[row][col] = newMesh;
-      const alreadyChanged = prev.changedMeshes.some(([r, c]) => r === row && c === col);
+      const alreadyChanged = currentMapData.changedMeshes.some(([r, c]) => r === row && c === col);
       return {
         ...prev,
-        worldmap: newWorldmap,
-        changedMeshes: alreadyChanged ? prev.changedMeshes : [...prev.changedMeshes, [row, col]]
+        maps: {
+          ...prev.maps,
+          [prev.mapType]: {
+            ...currentMapData,
+            worldmap: newWorldmap,
+            changedMeshes: alreadyChanged ? currentMapData.changedMeshes : [...currentMapData.changedMeshes, [row, col]]
+          }
+        }
       };
     });
     markUnsavedChanges()
@@ -435,18 +526,20 @@ export function useMapState() {
     setState(prev => ({ ...prev, selectedTriangle: triangleIndex }));
   }, [setState]);
 
+  const currentMapData = state.maps[state.mapType];
+
   return {
-    mapId: state.mapId,
+    mapId: currentMapData.mapId,
     mapType: state.mapType,
     mode: state.mode,
-    map: state.map,
-    worldmap: state.worldmap,
-    textures: state.textures,
+    map: currentMapData.map,
+    worldmap: currentMapData.worldmap,
+    textures: currentMapData.textures,
     loadedTextures: state.loadedTextures,
-    enabledAlternatives: state.enabledAlternatives,
-    triangleMap: state.triangleMap,
+    enabledAlternatives: currentMapData.enabledAlternatives,
+    triangleMap: currentMapData.triangleMap,
     selectedTriangle: state.selectedTriangle,
-    loaded: state.loaded,
+    loaded: currentMapData.loaded,
     loadMap,
     saveMap,
     loadTextures,

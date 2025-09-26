@@ -17,17 +17,19 @@ import { useScriptsState } from "@/hooks/useScriptState"
 import { useLocationsState } from "@/hooks/useLocationsState"
 import { useKeyboardShortcuts, getShortcutDisplay } from "@/hooks/useKeyboardShortcuts"
 import { useEncountersState } from "@/hooks/useEncountersState"
+import { useTextureAtlas } from "@/hooks/useTextureAtlas"
 import { useEffect, useRef } from "react"
 
 export function Navbar() {
   const { setMessage } = useStatusBar()
   const { alert, showAlert, hideAlert, setDataPath, setLoading, setLoadingStep, unsavedChanges } = useAppState()
   const { saveMessages, loadMessages } = useMessagesState()
-  const { saveMap, loadMap, loadTextures, mapType } = useMapState()
+  const { saveMap, loadMap, loadTextures, mapType, loaded, loadedTextures } = useMapState()
   const { saveScripts, loadScripts } = useScriptsState()
   const { saveLocations, loadLocations } = useLocationsState()
   const { saveEncounters, loadEncounters } = useEncountersState()
   const { loadLgp, opened, openedTime } = useLgpState()
+  const { resetTextureAtlas } = useTextureAtlas()
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [pendingDirectory, setPendingDirectory] = useState<string | null>(null)
 
@@ -68,6 +70,7 @@ export function Navbar() {
   const proceedWithDirectory = async (directory: string) => {
     setDataPath(directory)
     setLoading(true)
+    resetTextureAtlas()
     setMessage("Loading world_us.lgp...")
     await loadLgp(directory)
   }
@@ -110,7 +113,6 @@ export function Navbar() {
 
   // Centralized map loading on mapType changes (and initial)
   const mapLoadingRef = useRef<"overworld" | "underwater" | "glacier" | null>(null)
-  const lastLoadedTypeRef = useRef<"overworld" | "underwater" | "glacier" | null>(null)
   useEffect(() => {
     if (!opened) return
     const MAP_ID_BY_TYPE: Record<"overworld" | "underwater" | "glacier", "WM0" | "WM2" | "WM3"> = {
@@ -119,21 +121,27 @@ export function Navbar() {
       glacier: "WM3",
     }
     if (mapLoadingRef.current === mapType) return
-    if (lastLoadedTypeRef.current === mapType) return
     mapLoadingRef.current = mapType
     ;(async () => {
       try {
-        setMessage(`Loading map (${mapType})...`)
-        await loadTextures(mapType)
-        await loadMap(MAP_ID_BY_TYPE[mapType], mapType)
+        const needsTextures = !loadedTextures[mapType]
+        const needsMap = !loaded
+        if (needsTextures || needsMap) {
+          setMessage(`Loading map (${mapType})...`)
+          if (needsTextures) {
+            await loadTextures(mapType)
+          }
+          if (needsMap) {
+            await loadMap(MAP_ID_BY_TYPE[mapType], mapType)
+          }
+        }
       } catch (error) {
         console.error("[Navbar] Error loading map:", error)
       } finally {
-        lastLoadedTypeRef.current = mapType
         mapLoadingRef.current = null
       }
     })()
-  }, [mapType, opened])
+  }, [mapType, opened, loaded, loadedTextures])
 
   const handleSave = async () => {
     try {

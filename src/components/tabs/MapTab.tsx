@@ -1,7 +1,7 @@
 import { Triangle } from "@/ff7/mapfile";
 import { TriangleWithVertices } from "@/components/map/types";
 import { MapType, MapMode, useMapState } from "@/hooks/useMapState";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import MapViewer from "../map/MapViewer";
 import { SelectionSidebar } from "@/components/map/components/SelectionSidebar";
 import { ExportImportSidebar } from "@/components/map/components/ExportImportSidebar";
@@ -25,6 +25,13 @@ export function MapTab() {
   const [showWireframe, setShowWireframe] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [showNormals, setShowNormals] = useState(false);
+
+  // Memoize the triangle select callback to prevent rerenders
+  const handleTriangleSelect = useCallback((triangle: TriangleWithVertices | null) => {
+    if (mode === 'selection') {
+      setSelectedTriangle(triangle);
+    }
+  }, [mode]);
 
   // Map loading is centralized in Navbar. We only respond to selection here.
 
@@ -89,7 +96,7 @@ export function MapTab() {
           <MapViewer
             renderingMode={renderingMode}
             showGrid={showGrid}
-            onTriangleSelect={mode === 'selection' ? setSelectedTriangle : undefined}
+            onTriangleSelect={handleTriangleSelect}
             cameraType={mode === 'export' ? 'orthographic' : 'perspective'}
             wireframe={showWireframe}
             onWireframeToggle={setShowWireframe}

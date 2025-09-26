@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Stats, PerspectiveCamera, OrthographicCamera } from '@react-three/drei';
 import { Triangle } from '@/ff7/mapfile';
@@ -60,6 +60,7 @@ function MapViewer({
   const { worldmap, mapType, mapId, mode, setSelectedTriangle } = useMapState();
   const zoomRef = useRef(1);
   const currentCameraRef = useRef<ThreePerspectiveCamera | ThreeOrthographicCamera | null>(null);
+  const updateWireframeOpacityRef = useRef<((cameraHeight: number) => void) | null>(null);
 
   // Store camera state for seamless switching between camera types
   const cameraStateRef = useRef({
@@ -88,18 +89,22 @@ function MapViewer({
     }
   }, [onTriangleSelect]);
 
-  const handleTriangleSelect = (triangle: TriangleWithVertices | null, faceIndex: number | null) => {
+  const handleTriangleSelect = useCallback((triangle: TriangleWithVertices | null, faceIndex: number | null) => {
+    setSelectedFaceIndex(faceIndex);
+    setSelectedTriangle(faceIndex);
     if (onTriangleSelect) {
-      setSelectedFaceIndex(faceIndex);
-      setSelectedTriangle(faceIndex);
       onTriangleSelect(triangle);
     }
-  };
+  }, [onTriangleSelect, setSelectedTriangle]);
 
   const handleRotate = (direction: 'left' | 'right') => {
     const rotationAngle = (Math.PI / 8) * (direction === 'left' ? 1 : -1);
     setRotation(prev => prev + rotationAngle);
   };
+
+  const handleWireframeOpacityUpdate = useCallback((updateFn: (cameraHeight: number) => void) => {
+    updateWireframeOpacityRef.current = updateFn;
+  }, []);
 
   // Calculate map dimensions based on mapType only, not worldmap data
   // This prevents unnecessary view resets when alternatives are toggled
@@ -376,7 +381,7 @@ function MapViewer({
             intensity={1.0}
             castShadow
           />
-          <OrbitControls 
+          <OrbitControls
             ref={controlsRef}
             target={[mapDimensions.center.x, 0, mapDimensions.center.z]}
             enableDamping={false}
@@ -390,6 +395,10 @@ function MapViewer({
                   // For perspective camera, calculate zoom based on camera distance
                   const distance = camera.position.y;
                   zoomRef.current = CAMERA_HEIGHT[mapType] / distance;
+                }
+                // Update wireframe opacity based on camera height
+                if (updateWireframeOpacityRef.current) {
+                  updateWireframeOpacityRef.current(camera.position.y);
                 }
               }
             }}
@@ -405,8 +414,8 @@ function MapViewer({
               showGrid={shouldShowGrid}
               wireframe={wireframe}
               showNormals={showNormals}
-              cameraHeight={camera?.position.y}
               mode={mode}
+              onWireframeOpacityUpdate={handleWireframeOpacityUpdate}
             />
           )}
           {showModels && <ModelOverlay zoomRef={zoomRef} />}

@@ -1,16 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
-import { useTextureAtlas } from './hooks';
 import { useGeometry } from './hooks';
 import { useSelectedTriangleGeometry } from './hooks';
 import { RenderingMode } from '../../types';
-import { Triangle } from '@/ff7/mapfile';
 import { TriangleWithVertices } from '@/components/map/types';
 import { MapMode, useMapState } from '@/hooks/useMapState';
 import { MESH_SIZE } from '../../constants';
 import { GridOverlay } from '../GridOverlay';
 import { SELECTION_Y_OFFSET } from '../../constants';
+import { useTextureAtlas } from '@/hooks/useTextureAtlas';
 
 interface WorldMeshProps {
   renderingMode: RenderingMode;
@@ -23,15 +22,31 @@ interface WorldMeshProps {
   disablePainting?: boolean;
   wireframe?: boolean;
   showNormals?: boolean;
-  cameraHeight?: number;
   mode?: MapMode;
   gridActiveOverride?: boolean;
   preselectedCell?: { x: number; z: number } | null;
+  onWireframeOpacityUpdate?: (updateFn: (cameraHeight: number) => void) => void;
 }
 
-export function WorldMesh({ 
-  renderingMode, 
-  onTriangleSelect, 
+export function useTraceUpdate(props) {
+  const prev = useRef(props);
+  useEffect(() => {
+    const changedProps = Object.entries(props).reduce((ps, [k, v]) => {
+      if (prev.current[k] !== v) {
+        ps[k] = [prev.current[k], v];
+      }
+      return ps;
+    }, {});
+    if (Object.keys(changedProps).length > 0) {
+      console.log('Changed props:', changedProps);
+    }
+    prev.current = props;
+  });
+}
+
+export function WorldMesh({
+  renderingMode,
+  onTriangleSelect,
   selectedFaceIndex,
   debugCanvasRef,
   mapCenter,
@@ -40,23 +55,45 @@ export function WorldMesh({
   disablePainting,
   wireframe,
   showNormals = false,
-  cameraHeight,
   mode,
   gridActiveOverride,
   preselectedCell,
+  onWireframeOpacityUpdate,
 }: WorldMeshProps) {
+  useTraceUpdate({ renderingMode, onTriangleSelect, selectedFaceIndex, debugCanvasRef, mapCenter, rotation, showGrid, disablePainting, wireframe, showNormals, mode, gridActiveOverride, preselectedCell });
+
   const [mouseDownPos, setMouseDownPos] = useState<{ x: number; y: number } | null>(null);
   const [paintingMouseDownPos, setPaintingMouseDownPos] = useState<{ x: number; y: number } | null>(null);
   const [paintingDragActive, setPaintingDragActive] = useState(false);
   const [paintingDragStartMode, setPaintingDragStartMode] = useState<boolean | null>(null);
   const [paintingHasToggled, setPaintingHasToggled] = useState(false);
+  const wireframeMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
   const { textures, worldmap, mapType, addChangedMesh, paintingSelectedTriangles, togglePaintingSelectedTriangle, setTriangleMap } = useMapState();
-  
-  const { texture, canvas, texturePositions } = useTextureAtlas(textures, mapType);
+
+  const { loadTextureAtlas } = useTextureAtlas();
+  const { texture, canvas, texturePositions } = loadTextureAtlas(textures, mapType);
+
   const { geometry, normalLinesGeometry, triangleMap, updateTriangleUVs, updateTrianglePosition, updateColors, updateTriangleTexture, updateTriangleNormals } = useGeometry(worldmap, mapType, renderingMode, textures, texturePositions);
   const selectedTriangleGeometry = useSelectedTriangleGeometry(triangleMap, selectedFaceIndex);
 
   const selectedTriangle = triangleMap?.[selectedFaceIndex];
+
+  // Callback to update wireframe opacity based on camera height
+  const updateWireframeOpacity = useCallback((cameraHeight: number) => {
+    if (wireframeMaterialRef.current) {
+      const opacity = cameraHeight
+        ? Math.max(0, 0.3 * (1 - Math.max(0, (cameraHeight - 1000) / 5000)))
+        : 0.2;
+      wireframeMaterialRef.current.opacity = opacity;
+    }
+  }, []);
+
+  // Provide the update function to parent component
+  useEffect(() => {
+    if (onWireframeOpacityUpdate) {
+      onWireframeOpacityUpdate(updateWireframeOpacity);
+    }
+  }, [onWireframeOpacityUpdate, updateWireframeOpacity]);
 
   // Update triangleMap in global state whenever it changes
   useEffect(() => {
@@ -155,11 +192,20 @@ export function WorldMesh({
     setPaintingHasToggled(false);
   };
 
-  if (!geometry || !triangleMap) return null;
-
-  const wireframeOpacity = cameraHeight 
-    ? Math.max(0, 0.3 * (1 - Math.max(0, (cameraHeight - 1000) / 5000)))
-    : 0.2;
+  if (!geometry || !triangleMap) {
+    // Show loading indicator when worldmap exists but geometry is still being computed
+    if (worldmap && worldmap.length > 0) {
+      return (
+        <group>
+          <mesh>
+            <boxGeometry args={[100, 100, 100]} />
+            <meshBasicMaterial color="#666" transparent opacity={0.3} />
+          </mesh>
+        </group>
+      );
+    }
+    return null;
+  }
 
   return (
     <group>
@@ -189,11 +235,12 @@ export function WorldMesh({
           </mesh>
           {wireframe && (
             <mesh geometry={geometry} renderOrder={10}>
-              <meshBasicMaterial 
+              <meshBasicMaterial
+                ref={wireframeMaterialRef}
                 color="#000000"
                 wireframe={true}
                 transparent={true}
-                opacity={wireframeOpacity}
+                opacity={0.2}
                 depthTest={true}
                 depthWrite={true}
               />

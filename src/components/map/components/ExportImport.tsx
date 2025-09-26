@@ -2,7 +2,7 @@ import { useGridSelection } from '@/contexts/GridSelectionContext';
 import { Button } from '@/components/ui/button';
 import { useMapState } from '@/hooks/useMapState';
 import { Mesh } from '@/ff7/mapfile';
-import { useTextureAtlas } from './WorldMesh/hooks';
+import { useTextureAtlas } from '@/hooks/useTextureAtlas';
 import { calcUV } from '@/lib/utils';
 import { ATLAS_SIZE, MESH_SIZE, TEXTURE_PADDING } from '../constants';
 import { useRef, useState } from 'react';
@@ -82,7 +82,8 @@ function generateTriangleKey(vertex0: { x: number, y: number, z: number }, verte
 export function ExportImport() {
   const { selectedCell } = useGridSelection();
   const { worldmap, textures, mapType, updateSectionMesh } = useMapState();
-  const { texturePositions, canvas } = useTextureAtlas(textures, mapType);
+  const { loadTextureAtlas } = useTextureAtlas();
+  const { texturePositions, canvas } = loadTextureAtlas(textures, mapType);
   const [resetNormals, setResetNormals] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
