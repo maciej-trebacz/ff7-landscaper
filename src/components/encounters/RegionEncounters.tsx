@@ -1,17 +1,12 @@
-import { useState, useEffect } from 'react'
-import { useEncountersState } from '@/hooks/useEncountersState'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Slider } from '@/components/ui/slider'
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { REGION_NAMES, TRIANGLE_TYPES } from '@/lib/map-data'
 import type { EncounterPair, EncounterSet } from '@/ff7/encwfile'
 import type { FF7ExeData } from '@/ff7/ff7exefile'
-
-// Use only the first 16 regions for encounters
-const ENCOUNTER_REGION_NAMES = Object.values(REGION_NAMES).slice(0, 16)
 
 function getTerrainName(terrainType: number): string {
   const terrainInfo = TRIANGLE_TYPES[terrainType]
@@ -42,16 +37,18 @@ function EncounterEditor({
             className="w-20 h-7 text-xs"
           />
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 w-48">
           <Label className="text-xs">Rate:</Label>
-          <Input
-            type="number"
-            min="0"
-            max="63"
-            value={encounter.rate}
-            onChange={(e) => onUpdate({ rate: parseInt(e.target.value) || 0 })}
-            className="w-16 h-7 text-xs"
-          />
+          <div className="flex items-center gap-2 w-full">
+            <Slider
+              value={encounter.rate}
+              onValueChange={(v) => onUpdate({ rate: v })}
+              min={0}
+              max={64}
+              step={1}
+            />
+            <div className="w-4 text-xs text-right tabular-nums">{encounter.rate}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -95,16 +92,18 @@ function EncounterSetEditor({
               onCheckedChange={(checked) => onUpdateMeta({ active: checked })}
             />
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2 w-48">
             <Label className="text-sm">Rate:</Label>
-            <Input
-              type="number"
-              min="0"
-              max="255"
-              value={encounterSet.encounterRate}
-              onChange={(e) => onUpdateMeta({ encounterRate: parseInt(e.target.value) || 0 })}
-              className="w-16 h-7 text-xs"
-            />
+            <div className="flex items-center gap-2 w-full">
+              <Slider
+                value={encounterSet.encounterRate}
+                onValueChange={(v) => onUpdateMeta({ encounterRate: v })}
+                min={0}
+                max={64}
+                step={1}
+              />
+              <div className="w-4 text-sm text-right tabular-nums">{encounterSet.encounterRate}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -173,101 +172,72 @@ function EncounterSetEditor({
   )
 }
 
-export function RandomEncounters() {
-  const [selectedRegion, setSelectedRegion] = useState(0)
-  const [selectedSet, setSelectedSet] = useState(0)
-  const { data, exeData, updateEncounterMeta, updateEncounterPair } = useEncountersState()
+interface RegionEncountersProps {
+  selectedRegion: number
+  selectedSet: number
+  onSelectedSetChange: (set: number) => void
+  regionData: any // Type from encwfile
+  exeData: FF7ExeData | null
+  updateEncounterMeta: (regionIndex: number, setIndex: number, updates: Partial<Pick<EncounterSet, 'active' | 'encounterRate'>>) => void
+  updateEncounterPair: (regionIndex: number, setIndex: number, group: 'normal' | 'back' | 'side' | 'pincer' | 'chocobo', indexInGroup: number | null, updates: Partial<EncounterPair>) => void
+}
 
-  // Reset selected set to 0 when region changes
-  useEffect(() => {
-    setSelectedSet(0)
-  }, [selectedRegion])
-
-  if (!data) {
-    return (
-      <div className="flex-1 p-4">
-        <div className="text-center text-muted-foreground">
-          <h3 className="text-lg font-medium mb-2">Random Encounters</h3>
-          <p>Loading encounter data...</p>
-        </div>
-      </div>
-    )
-  }
-
-  const regionData = data.randomEncounters.regions[selectedRegion]
+export function RegionEncounters({
+  selectedRegion,
+  selectedSet,
+  onSelectedSetChange,
+  regionData,
+  exeData,
+  updateEncounterMeta,
+  updateEncounterPair
+}: RegionEncountersProps) {
+  // Use only the first 16 regions for encounters
+  const ENCOUNTER_REGION_NAMES = Object.values(REGION_NAMES).slice(0, 16)
 
   return (
-    <>
-      {/* Region List Sidebar */}
-      <div className="w-[240px] border-r bg-background p-2 overflow-y-auto">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-xs font-medium text-muted-foreground">Regions ({ENCOUNTER_REGION_NAMES.length})</div>
-        </div>
-        <div className="space-y-1">
-          {ENCOUNTER_REGION_NAMES.map((name, index) => (
-            <Button
-              key={index}
-              variant={selectedRegion === index ? "secondary" : "ghost"}
-              className="w-full justify-start h-7 text-xs px-2"
-              onClick={() => setSelectedRegion(index)}
-            >
-              <div className="flex items-center justify-between w-full">
-                <span>{name}</span>
-                <span className="text-[10px] font-thin text-muted-foreground">({index})</span>
-              </div>
-            </Button>
-          ))}
-        </div>
-        <div className="mt-3 pt-2 border-t text-[10px] text-muted-foreground leading-relaxed text-center">
-          Regions 16+ use encounter tables from region 15
-        </div>
-      </div>
-
-      {/* Encounter Editor */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4">
-          <div className="mb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium">Region {selectedRegion}: {ENCOUNTER_REGION_NAMES[selectedRegion]}</h3>
-                <p className="text-sm text-muted-foreground">
-                  Configure encounter sets for this region
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Select value={selectedSet.toString()} onValueChange={(value) => setSelectedSet(parseInt(value))}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[0, 1, 2, 3].map((setIndex) => {
-                      const terrainType = exeData?.terrainRegions[selectedRegion]?.terrainTypes[setIndex]
-                      const terrainName = terrainType !== undefined ? getTerrainName(terrainType) : 'Unknown'
-                      return (
-                        <SelectItem key={setIndex} value={setIndex.toString()}>
-                          Set {setIndex + 1} ({terrainName})
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
+    <div className="flex-1 overflow-y-auto">
+      <div className="p-4">
+        <div className="mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium">Region {selectedRegion}: {ENCOUNTER_REGION_NAMES[selectedRegion]}</h3>
+              <p className="text-sm text-muted-foreground">
+                Configure encounter sets for this region
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={selectedSet.toString()} onValueChange={(value) => onSelectedSetChange(parseInt(value))}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[0, 1, 2, 3].map((setIndex) => {
+                    const terrainType = exeData?.terrainRegions[selectedRegion]?.terrainTypes[setIndex]
+                    const terrainName = terrainType !== undefined ? getTerrainName(terrainType) : 'Unknown'
+                    return (
+                      <SelectItem key={setIndex} value={setIndex.toString()}>
+                        Set {setIndex + 1} ({terrainName})
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
             </div>
           </div>
+        </div>
 
-          {/* Selected Set Editor */}
-          <div className="space-y-4">
-            <EncounterSetEditor
-              encounterSet={regionData.sets[selectedSet]}
-              setIndex={selectedSet}
-              regionIndex={selectedRegion}
-              exeData={exeData}
-              onUpdateMeta={(updates) => updateEncounterMeta(selectedRegion, selectedSet, updates)}
-              onUpdatePair={(group, indexInGroup, updates) => updateEncounterPair(selectedRegion, selectedSet, group, indexInGroup, updates)}
-            />
-          </div>
+        {/* Selected Set Editor */}
+        <div className="space-y-4">
+          <EncounterSetEditor
+            encounterSet={regionData.sets[selectedSet]}
+            setIndex={selectedSet}
+            regionIndex={selectedRegion}
+            exeData={exeData}
+            onUpdateMeta={(updates) => updateEncounterMeta(selectedRegion, selectedSet, updates)}
+            onUpdatePair={(group, indexInGroup, updates) => updateEncounterPair(selectedRegion, selectedSet, group, indexInGroup, updates)}
+          />
         </div>
       </div>
-    </>
+    </div>
   )
 }

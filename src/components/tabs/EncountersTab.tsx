@@ -1,70 +1,55 @@
-import { useState } from 'react'
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { RandomEncounters } from "@/components/encounters/RandomEncounters"
-import { YuffieEncounters } from "@/components/encounters/YuffieEncounters"
-import { ChocoboEncounters } from "@/components/encounters/ChocoboEncounters"
+import { useState, useEffect } from 'react'
 import { useEncountersState } from '@/hooks/useEncountersState'
-import { TerrainRegionsDialog } from "../encounters/TerrainRegionsDialog"
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
-type EncounterType = 'random' | 'yuffie' | 'chocobo'
+import { REGION_NAMES } from '@/lib/map-data'
+import { TerrainRegionsDialog } from "../encounters/TerrainRegionsDialog"
+import { RegionEncounters } from "../encounters/RegionEncounters"
+import { YuffieEncounters } from "../encounters/YuffieEncounters"
+import { ChocoboEncounters } from "../encounters/ChocoboEncounters"
+
+// Use only the first 16 regions for encounters
+const ENCOUNTER_REGION_NAMES = Object.values(REGION_NAMES).slice(0, 16)
+
+
+type EncounterView = 'regions' | 'yuffie' | 'chocobo'
 
 export function EncountersTab() {
-  const { loaded } = useEncountersState()
-  const [selectedType, setSelectedType] = useState<EncounterType>('random')
+  const [selectedRegion, setSelectedRegion] = useState(0)
+  const [selectedSet, setSelectedSet] = useState(0)
+  const [selectedView, setSelectedView] = useState<EncounterView>('regions')
   const [isTerrainDialogOpen, setIsTerrainDialogOpen] = useState(false)
+  const { data, exeData, updateEncounterMeta, updateEncounterPair, updateYuffie, updateChocobo } = useEncountersState()
 
-  const renderContent = () => {
-    switch (selectedType) {
-      case 'random':
-        return <RandomEncounters />
-      case 'yuffie':
-        return <YuffieEncounters />
-      case 'chocobo':
-        return <ChocoboEncounters />
-      default:
-        return <RandomEncounters />
-    }
+  // Reset selected set to 0 when region changes
+  useEffect(() => {
+    setSelectedSet(0)
+  }, [selectedRegion])
+
+  if (!data) {
+    return (
+      <div className="flex-1 p-4">
+        <div className="text-center text-muted-foreground">
+          <h3 className="text-lg font-medium mb-2">Random Encounters</h3>
+          <p>Loading encounter data...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="flex flex-col w-full min-h-0">
-      {/* Top Controls Bar */}
-      <div className="w-full bg-sidebar border-b border-slate-800/40 flex items-center justify-between gap-2 px-2 py-1">
-        <div className="flex items-center gap-1.5">
-          <Button
-            variant={selectedType === 'random' ? 'default' : 'outline'}
-            size="sm"
-            className="h-6 text-xs px-3"
-            onClick={() => setSelectedType('random')}
-          >
-            Random
-          </Button>
-          <Button
-            variant={selectedType === 'yuffie' ? 'default' : 'outline'}
-            size="sm"
-            className="h-6 text-xs px-3"
-            onClick={() => setSelectedType('yuffie')}
-          >
-            Yuffie
-          </Button>
-          <Button
-            variant={selectedType === 'chocobo' ? 'default' : 'outline'}
-            size="sm"
-            className="h-6 text-xs px-3"
-            onClick={() => setSelectedType('chocobo')}
-          >
-            Chocobo
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-1.5">
+    <div className="flex w-full min-h-0">
+      {/* Region List Sidebar */}
+      <div className="w-[240px] border-r bg-background p-2 overflow-y-auto">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-medium text-muted-foreground">Regions ({ENCOUNTER_REGION_NAMES.length})</div>
           <Dialog open={isTerrainDialogOpen} onOpenChange={setIsTerrainDialogOpen}>
             <DialogTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-6 text-xs px-3"
+                className="h-6 text-xs px-2"
               >
                 Edit Region Sets
               </Button>
@@ -77,12 +62,78 @@ export function EncountersTab() {
             </DialogContent>
           </Dialog>
         </div>
+        <div className="space-y-1">
+          {ENCOUNTER_REGION_NAMES.map((name, index) => (
+            <Button
+              key={index}
+              variant={selectedRegion === index && selectedView === 'regions' ? "secondary" : "ghost"}
+              className="w-full justify-start h-7 text-xs px-2"
+              onClick={() => {
+                setSelectedRegion(index)
+                setSelectedView('regions')
+              }}
+            >
+              <div className="flex items-center justify-between w-full">
+                <span>{name}</span>
+                <span className="text-[10px] font-thin text-muted-foreground">({index})</span>
+              </div>
+            </Button>
+          ))}
+        </div>
+
+        <div className="mt-3 pt-2 border-t text-[10px] text-muted-foreground leading-relaxed text-center">
+          Regions 16+ use encounter tables from region 15
+        </div>
+
+        {/* Misc Section */}
+        <div className="mt-3 pt-2 border-t">
+          <div className="text-xs font-medium text-muted-foreground mb-2">Misc.</div>
+          <div className="space-y-1">
+            <Button
+              variant={selectedView === 'yuffie' ? "secondary" : "ghost"}
+              className="w-full justify-start h-7 text-xs px-2"
+              onClick={() => setSelectedView('yuffie')}
+            >
+              Yuffie
+            </Button>
+            <Button
+              variant={selectedView === 'chocobo' ? "secondary" : "ghost"}
+              className="w-full justify-start h-7 text-xs px-2"
+              onClick={() => setSelectedView('chocobo')}
+            >
+              Chocobos
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 flex min-h-0">
-        {renderContent()}
-      </div>
+      {/* Encounter Editor */}
+      {selectedView === 'regions' && (() => {
+        const regionData = data.randomEncounters.regions[selectedRegion]
+        return (
+          <RegionEncounters
+            selectedRegion={selectedRegion}
+            selectedSet={selectedSet}
+            onSelectedSetChange={setSelectedSet}
+            regionData={regionData}
+            exeData={exeData}
+            updateEncounterMeta={updateEncounterMeta}
+            updateEncounterPair={updateEncounterPair}
+          />
+        )
+      })()}
+      {selectedView === 'yuffie' && (
+        <YuffieEncounters
+          yuffieEncounters={data.yuffieEncounters}
+          updateYuffie={updateYuffie}
+        />
+      )}
+      {selectedView === 'chocobo' && (
+        <ChocoboEncounters
+          chocoboRatings={data.chocoboRatings}
+          updateChocobo={updateChocobo}
+        />
+      )}
     </div>
   )
 }
