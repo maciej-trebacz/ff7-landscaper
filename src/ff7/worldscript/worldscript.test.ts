@@ -80,16 +80,16 @@ RETURN`;
 end
 if Savemap.game_progress < 1580 then
   if Entity.distance_to_point(14) <= 256 then
-    System.call_function(20, Entities.highwind)
+    System.call_function(Entities.highwind, 20)
   end
-  goto label_1856
+  goto label_1
 end
 if Savemap.game_progress == 1580 then
   if Entity.distance_to_point(14) <= 256 then
     System.enter_field(Fields.highwind_bridge_5, 0)
   end
 end
-::label_1856::
+::label_1::
 if Savemap.game_progress == 1596 then
   if Entity.distance_to_point(9) <= 256 then
     Savemap.game_progress = 1598
@@ -154,10 +154,10 @@ if !Savemap[0xF28].bit[2] then
   Entity.play_animation(0, 1)
   Entity.set_movespeed(20)
   Entity.set_direction_facing(Special.entity_direction + 128)
-  ::label_e7c::
-  if Special.unknown_0d then
+  ::label_1::
+  if Special.current_triangle_script_id then
     System.wait(1)
-    goto label_e7c
+    goto label_1
   end
   Window.wait_until_ready()
   Entity.set_movespeed(0)
@@ -171,14 +171,14 @@ if !Savemap[0xF28].bit[2] then
   Window.set_message(22)
   Window.wait_for_acknowledge()
   Savemap[0xF28].bit[2] = 1
-  goto label_f02
+  goto label_3
 end
 Entity.set_movespeed(40)
 Entity.set_direction_facing(Special.entity_direction + 128)
-::label_ec9::
-if Special.unknown_0d then
+::label_2::
+if Special.current_triangle_script_id then
   System.wait(1)
-  goto label_ec9
+  goto label_2
 end
 Entity.set_movespeed(0)
 System.wait(10)
@@ -190,7 +190,7 @@ Window.set_params(0, 0)
 Window.wait_until_ready()
 Window.set_message(23)
 Window.wait_for_acknowledge()
-::label_f02::
+::label_3::
 Entity.play_animation(0, 1)
 System.set_control_lock(1)
 System.set_encounters(1)
@@ -229,12 +229,12 @@ RETURN`;
 
     const expected = `if Special.player_entity_model_id == Entities.cloud then
   System.enter_field(Fields.icicle_village_north, 0)
-  goto label_2bf4
+  goto label_1
 end
 if Special.player_entity_model_id == Entities.tifa or Special.player_entity_model_id == Entities.cid then
-  System.call_function(31, Special.player_entity_model_id)
+  System.call_function(Special.player_entity_model_id, 31)
 end
-::label_2bf4::
+::label_1::
 return`;
 
     const result = worldscript.decompile(script);
@@ -286,9 +286,9 @@ System.set_control_lock(0)
 Entity.set_walk_speed(20)
 Entity.set_direction_facing(Special.entity_direction)
 Entity.set_movement_direction(Special.entity_direction + 128)
-System.fade_out(250, 0)
+System.fade_out(250)
 System.wait(3)
-System.fade_in(250, 0)
+System.fade_in(250)
 System.wait(3)
 Entity.set_movespeed(0)
 return`;
@@ -516,16 +516,16 @@ if Entity.distance_to_entity(Entities.gold_saucer) <= 100 then
 end
 if Savemap.game_progress < 1580 then
   if Entity.distance_to_point(14) <= 256 then
-    System.call_function(20, Entities.highwind)
+    System.call_function(Entities.highwind, 20)
   end
-  goto label_1856
+  goto label_1
 end
 if Savemap.game_progress == 1580 then
   if Entity.distance_to_point(14) <= 256 then
     System.enter_field(Fields.highwind_bridge_5, 0)
   end
 end
-::label_1856::
+::label_1::
 if Savemap.game_progress == 1596 then
   if Entity.distance_to_point(9) <= 256 then
     Savemap.game_progress = 1598
@@ -766,7 +766,7 @@ end
 
 -- Check for other characters
 if Special.player_entity_model_id == 1 or Special.player_entity_model_id == 2 then -- Tifa or Cid
-  System.call_function(31, Special.player_entity_model_id) -- Call character-specific function
+  System.call_function(Special.player_entity_model_id, 31) -- Call character-specific function
 end
 
 ::label_end:: -- End label

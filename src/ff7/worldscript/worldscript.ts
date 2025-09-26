@@ -16,7 +16,8 @@ export class Worldscript {
   private debugMode: boolean = false;
   private stackHistory: Array<{ operation: string, stack: Expression[], line: number, offset: number }> = [];
   private processedLines: Set<number>;
-  private labelCounter: number = 0; // Added for unique internal labels
+  private labelCounter: number = 0; // Counter for sequential label names
+  private offsetToLabelMap: Map<number, string> = new Map(); // Maps offset to sequential label name
 
   // Inverse mappings for compilation
   private modelsMappingInverse: Record<string, number> = Object.fromEntries(
@@ -67,8 +68,11 @@ export class Worldscript {
   public decompile(opcodeString: string, includeMetadata: boolean = false): string {
     this.stackHistory = [];
     this.processedLines = new Set();
+    this.labelCounter = 0;
+    this.offsetToLabelMap = new Map();
     this.opcodeLines = opcodeString.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     this.calculateOffsetsAndJumpTargets(includeMetadata);
+    this.assignSequentialLabels();
     this.outputScriptWithOffsets();
 
     this.stack = [];
@@ -133,6 +137,15 @@ export class Worldscript {
     }
   }
 
+  private assignSequentialLabels() {
+    // Sort jump targets by offset to ensure consistent labeling
+    const sortedTargets = Array.from(this.jumpTargets).sort((a, b) => a - b);
+    for (const offset of sortedTargets) {
+      this.labelCounter++;
+      this.offsetToLabelMap.set(offset, `label_${this.labelCounter}`);
+    }
+  }
+
   private outputScriptWithOffsets() {
     if (this.debugMode) {
       console.log("\nScript with offsets:");
@@ -194,7 +207,10 @@ export class Worldscript {
     const offset = this.lineOffsets[lineIndex];
     const statements: Statement[] = [];
     if (this.jumpTargets.has(offset)) {
-      statements.push({ type: 'Label', label: `label_${offset.toString(16)}` });
+      const labelName = this.offsetToLabelMap.get(offset);
+      if (labelName) {
+        statements.push({ type: 'Label', label: labelName });
+      }
     }
   
     const line = this.opcodeLines[lineIndex];
@@ -212,7 +228,10 @@ export class Worldscript {
       // No statement generated
     } else if (opcode.mnemonic === Mnemonic.GOTO) {
       const target = parseInt(codeParams[0], 16);
-      statement = { type: 'Goto', label: `label_${target.toString(16)}` };
+      const labelName = this.offsetToLabelMap.get(target);
+      if (labelName) {
+        statement = { type: 'Goto', label: labelName };
+      }
       nextLine = this.findLineByOffset(target);
     } else if (opcode.mnemonic === Mnemonic.GOTO_IF_FALSE) {
       const condition = this.stack.pop() as Expression;
@@ -671,6 +690,7 @@ export class Worldscript {
   }
   public compile(luaCode: string): string {
     this.labelCounter = 0; // Reset label counter for each compilation
+    this.offsetToLabelMap = new Map(); // Reset label map
     const codeWithoutComments = this.stripComments(luaCode);
     const tokens = this.tokenize(codeWithoutComments);
     const parser = new Parser(tokens);

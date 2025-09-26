@@ -62,15 +62,21 @@ export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, Worldscript
   >({})
   const lastCallRef = useRef<CallContext | null>(null)
   // Toggle to enable/disable the inline signature popover UI without removing logic
-  const ENABLE_SIGNATURE_POPOVER = false
+  const ENABLE_SIGNATURE_POPOVER = true
+  const [popoverHovered, setPopoverHovered] = useState(false)
   const [signatureHelp, setSignatureHelp] = useState<{
-    namespace: string
-    method: string
-    paramNames: string[]
+    type: 'function' | 'goto'
+    // Function call properties
+    namespace?: string
+    method?: string
+    paramNames?: string[]
     paramDescriptions?: string[]
     description?: string
-    activeParamIndex: number
-    totalParams: number
+    activeParamIndex?: number
+    totalParams?: number
+    // Goto label properties
+    label?: string
+    labelLine?: number
     top: number
     left: number
   } | null>(null)
@@ -218,11 +224,71 @@ export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, Worldscript
   }, [])
 
   const suppressNextSignatureRef = useRef<boolean>(false)
+  const popoverMouseDownRef = useRef<boolean>(false)
+
+  const clearSignatureHelp = (options?: { preserveContext?: boolean }) => {
+    setSignatureHelp(null)
+    setPopoverHovered(false)
+    if (!options?.preserveContext) {
+      lastCallRef.current = null
+      onContextChange?.(null)
+    }
+    popoverMouseDownRef.current = false
+  }
+
+  const hideSignatureHelp = () => {
+    if (!popoverHovered) {
+      clearSignatureHelp({ preserveContext: true })
+    }
+  }
 
   const updateSignatureHelp = (editor: any, options?: { silent?: boolean }) => {
     const session = editor.getSession()
     const pos = editor.getCursorPosition()
     const line: string = session.getLine(pos.row)
+
+    // Check for goto statements first
+    const gotoMatch = line.match(/^\s*goto\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*$/)
+    if (gotoMatch) {
+      const labelName = gotoMatch[1]
+
+      // Find the label definition line
+      let labelLine = -1
+      const totalLines = session.getLength()
+      for (let i = 0; i < totalLines; i++) {
+        const lineContent = session.getLine(i)
+        if (lineContent.trim() === `::${labelName}::`) {
+          labelLine = i
+          break
+        }
+      }
+
+      if (labelLine !== -1) {
+        setPopoverHovered(false)
+        // Position near cursor
+        const coords = editor.renderer.textToScreenCoordinates(pos.row, pos.column)
+        const container = containerRef.current
+        if (!container) return
+        const rect = container.getBoundingClientRect()
+        const top = coords.pageY - rect.top + editor.renderer.lineHeight
+        const left = coords.pageX - rect.left
+
+        if (!options?.silent) {
+          setSignatureHelp({
+            type: 'goto',
+            label: labelName,
+            labelLine: labelLine,
+            top,
+            left,
+          })
+        }
+        lastCallRef.current = null
+        onContextChange?.(null)
+        return
+      }
+      clearSignatureHelp()
+      return
+    }
 
     type ParsedCall = {
       ns: string
@@ -266,27 +332,21 @@ export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, Worldscript
     const selected = containing[0]
 
     if (!selected) {
-      setSignatureHelp(null)
-      lastCallRef.current = null
-      onContextChange?.(null)
+      clearSignatureHelp()
       return
     }
 
     const typedNamespace = selected.ns
     const methodName = selected.method
     if (!namespacesRef.current.includes(typedNamespace) || typedNamespace === "Special") {
-      setSignatureHelp(null)
-      lastCallRef.current = null
-      onContextChange?.(null)
+      clearSignatureHelp()
       return
     }
 
     const methods = methodsByNamespaceRef.current[typedNamespace] ?? []
     const def = methods.find((m) => m.name === methodName)
     if (!def) {
-      setSignatureHelp(null)
-      lastCallRef.current = null
-      onContextChange?.(null)
+      clearSignatureHelp()
       return
     }
 
@@ -368,7 +428,9 @@ export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, Worldscript
     const left = coords.pageX - rect.left
 
     if (!options?.silent) {
+      setPopoverHovered(false)
       setSignatureHelp({
+        type: 'function',
         namespace: typedNamespace,
         method: def.name,
         paramNames,
@@ -412,9 +474,7 @@ export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, Worldscript
           updateSignatureHelp(editor)
         }
         if (e.args === ")") {
-          setSignatureHelp(null)
-          lastCallRef.current = null
-          onContextChange?.(null)
+          clearSignatureHelp({ preserveContext: true })
         }
       }
     })
@@ -426,12 +486,16 @@ export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, Worldscript
     })
     // Hide popover on blur/unfocus
     editor.on("blur", () => {
-      setSignatureHelp(null)
+      setTimeout(() => {
+        if (!popoverMouseDownRef.current) {
+          hideSignatureHelp()
+        }
+      }, 0)
     })
     // Hide popover on scroll events
-    editor.getSession().on("changeScrollTop", () => setSignatureHelp(null))
-    editor.getSession().on("changeScrollLeft", () => setSignatureHelp(null))
-    editor.renderer.on("scroll", () => setSignatureHelp(null))
+    editor.getSession().on("changeScrollTop", () => clearSignatureHelp({ preserveContext: true }))
+    editor.getSession().on("changeScrollLeft", () => clearSignatureHelp({ preserveContext: true }))
+    editor.renderer.on("scroll", () => clearSignatureHelp({ preserveContext: true }))
   }
 
   // Manage search highlights
@@ -600,7 +664,7 @@ export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, Worldscript
         className={className}
         style={{ width: "100%", height: "100%" }}
       />
-      {ENABLE_SIGNATURE_POPOVER && signatureHelp && (
+      {ENABLE_SIGNATURE_POPOVER && signatureHelp && signatureHelp.type === 'goto' && (
         <div
           style={{
             position: "absolute",
@@ -613,53 +677,109 @@ export const WorldscriptEditor = forwardRef<WorldscriptEditorHandle, Worldscript
             padding: "6px 8px",
             fontSize: 12,
             maxWidth: 420,
-            pointerEvents: "none",
+            pointerEvents: signatureHelp.type === 'goto' ? "auto" : "none",
             zIndex: 10,
             boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
           }}
+          onMouseEnter={() => setPopoverHovered(true)}
+          onMouseLeave={() => setPopoverHovered(false)}
+          onMouseDownCapture={() => {
+            popoverMouseDownRef.current = true
+          }}
+          onMouseUpCapture={() => {
+            popoverMouseDownRef.current = false
+          }}
         >
-          <div style={{ fontFamily: "monospace" }}>
-            {signatureHelp.namespace}.{signatureHelp.method}(
-            {signatureHelp.paramNames.map((p, i) => {
-              const isActive = i === signatureHelp.activeParamIndex
-              return (
-                <span
-                  key={i}
-                  style={{
-                    fontWeight: isActive ? ("bold" as const) : "normal",
-                    color: isActive ? "#FFD54A" : "inherit",
-                  }}
-                >
-                  {p}
-                  {i < signatureHelp.paramNames.length - 1 ? ", " : ""}
-                </span>
-              )
-            })}
-            )
-          </div>
-          {showDetails && signatureHelp.description && (
-            <div style={{ marginTop: 4, opacity: 0.9 }}>{signatureHelp.description}</div>
-          )}
-          {showDetails &&
-            signatureHelp.paramDescriptions &&
-            signatureHelp.paramDescriptions[signatureHelp.activeParamIndex] && (
-              <div
-                style={{
-                  marginTop: 8,
-                  marginBottom: 8,
-                  borderTop: "1px solid #555",
-                  width: "100%",
+          {signatureHelp.type === 'goto' ? (
+            <div>
+              <button
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  popoverMouseDownRef.current = true
                 }}
-              />
-            )}
-          {showDetails &&
-            signatureHelp.paramDescriptions &&
-            signatureHelp.paramDescriptions[signatureHelp.activeParamIndex] && (
-              <div style={{ marginTop: 6, opacity: 0.85 }}>
-                <span style={{ fontWeight: "bold" }}>Param:</span>{" "}
-                {signatureHelp.paramDescriptions[signatureHelp.activeParamIndex]}
+                onMouseUp={(e) => {
+                  e.preventDefault()
+                  popoverMouseDownRef.current = false
+                }}
+                onClick={() => {
+                  if (signatureHelp.labelLine !== undefined) {
+                    const editor = editorRef.current
+                    if (editor) {
+                      const session = editor.getSession()
+                      const totalLines = session.getLength()
+                      const targetRow = Math.max(0, Math.min(signatureHelp.labelLine, totalLines - 1))
+                      session.selection.clearSelection()
+                      editor.gotoLine(targetRow + 1, 0, true)
+                      editor.centerSelection()
+                    }
+                  }
+                  clearSignatureHelp()
+                }}
+                style={{
+                  background: "#007acc",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 3,
+                  padding: "4px 8px",
+                  cursor: "pointer",
+                  fontSize: 11,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#005aa3"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#007acc"
+                }}
+              >
+                Jump to {signatureHelp.label}
+              </button>
+            </div>
+          ) : (
+            <>
+              <div style={{ fontFamily: "monospace" }}>
+                {signatureHelp.namespace}.{signatureHelp.method}(
+                {signatureHelp.paramNames?.map((p, i) => {
+                  const isActive = i === signatureHelp.activeParamIndex
+                  return (
+                    <span
+                      key={i}
+                      style={{
+                        fontWeight: isActive ? ("bold" as const) : "normal",
+                        color: isActive ? "#FFD54A" : "inherit",
+                      }}
+                    >
+                      {p}
+                      {i < (signatureHelp.paramNames?.length ?? 0) - 1 ? ", " : ""}
+                    </span>
+                  )
+                })}
+                )
               </div>
-            )}
+              {showDetails && signatureHelp.description && (
+                <div style={{ marginTop: 4, opacity: 0.9 }}>{signatureHelp.description}</div>
+              )}
+              {showDetails &&
+                signatureHelp.paramDescriptions &&
+                signatureHelp.paramDescriptions[signatureHelp.activeParamIndex ?? 0] && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      marginBottom: 8,
+                      borderTop: "1px solid #555",
+                      width: "100%",
+                    }}
+                  />
+                )}
+              {showDetails &&
+                signatureHelp.paramDescriptions &&
+                signatureHelp.paramDescriptions[signatureHelp.activeParamIndex ?? 0] && (
+                  <div style={{ marginTop: 6, opacity: 0.85 }}>
+                    <span style={{ fontWeight: "bold" }}>Param:</span>{" "}
+                    {signatureHelp.paramDescriptions[signatureHelp.activeParamIndex ?? 0]}
+                  </div>
+                )}
+            </>
+          )}
         </div>
       )}
     </div>
