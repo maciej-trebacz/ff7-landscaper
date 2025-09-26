@@ -414,10 +414,13 @@ export class Worldscript {
       if (param < 10) return `${param}`
       else return `0x${param.toString(16).toUpperCase()}`
     };
-  
+
+
     switch (opcode.mnemonic) {
       case Mnemonic.PUSH_CONSTANT:
-        return { type: 'Literal', value };
+        // Interpret PUSH_CONSTANT values as signed 16-bit integers
+        const signedValue = value >= 0x8000 ? value - 0x10000 : value;
+        return { type: 'Literal', value: signedValue };
   
       case Mnemonic.PUSH_SAVEMAP_WORD:
         namespace = 'Savemap';
@@ -585,6 +588,19 @@ export class Worldscript {
       }
     }
     throw new Error(`Unsupported math operation: ${opcode.mnemonic}`);
+  }
+
+  private numberToHexString(value: number | string): string {
+    const num = typeof value === 'string' ? parseInt(value, 16) : value;
+
+    if (num >= 0) {
+      // Positive numbers: convert to hex and pad
+      return num.toString(16).padStart(num < 256 ? 2 : 4, '0').toUpperCase();
+    } else {
+      // Negative numbers: convert to two's complement as 16-bit words
+      const wordValue = num & 0xFFFF;
+      return wordValue.toString(16).padStart(4, '0').toUpperCase();
+    }
   }
 
   private generateCode(): string {
@@ -808,14 +824,14 @@ export class Worldscript {
 
   private tokenize(code: string): Token[] {
     const tokens: Token[] = [];
-    const regex = /\s*(::|<=|>=|==|!=|<<|>>|<|>|or|and|!|-|\+|\*|\/|\||\&|\[|\]|\w+|\d+|[\.\(\),=:])\s*/g;
+    const regex = /\s*(::|<=|>=|==|!=|<<|>>|<|>|or|and|!|\+|\*|\/|\||\&|\[|\]|\w+|[\.\(\),=:]|-?\d+|-?0x[0-9a-fA-F]+|-)\s*/g;
     let match: RegExpExecArray | null;
     while ((match = regex.exec(code)) !== null) {
       const value = match[1];
       if (value === '::') tokens.push({ type: 'label_delim', value });
+      else if (value.match(/^-?\d+$/)) tokens.push({ type: 'number', value });
+      else if (value.match(/^-?0x[0-9a-fA-F]+$/)) tokens.push({ type: 'number', value });
       else if (['<=', '>=', '==', '!=', '<', '>', 'or', 'and', '!', '-', '+', '<<', '>>', '*', '/', '|', '&'].includes(value)) tokens.push({ type: 'operator', value });
-      else if (value.match(/^\d+$/)) tokens.push({ type: 'number', value });
-      else if (value.match(/^0x[0-9a-fA-F]+$/)) tokens.push({ type: 'number', value });
       else if (value.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
         if (['if', 'then', 'end', 'goto', 'return'].includes(value)) tokens.push({ type: 'keyword', value });
         else tokens.push({ type: 'identifier', value });
@@ -928,7 +944,7 @@ export class Worldscript {
   private generateExpression(expr: Expression): Instruction[] {
     switch (expr.type) {
       case 'Literal':
-        return [{ type: 'instruction', mnemonic: 'PUSH_CONSTANT', codeParams: [Number(expr.value).toString(16).padStart(Number(expr.value) < 256 ? 2 : 4, '0')] }];
+        return [{ type: 'instruction', mnemonic: 'PUSH_CONSTANT', codeParams: [this.numberToHexString(expr.value)] }];
       case 'Identifier':
         throw new Error('Bare identifiers are not supported in expressions.');
       case 'Member':

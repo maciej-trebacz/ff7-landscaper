@@ -825,4 +825,26 @@ return
 
     expect(resultWithComments.trim()).toBe(resultWithoutComments.trim());
   });
+
+  it('should handle negative values for Player.set_submarine_color', () => {
+    const script = `
+Player.set_submarine_color(-2)
+return
+`;
+
+    const expected = `
+RESET
+PUSH_CONSTANT FFFE
+SET_SUBMARINE
+RETURN
+`;
+
+    const result = worldscript.compile(script);
+    expect(result.trim()).toBe(expected.trim());
+
+    // Test round-trip: compile -> decompile -> compile should be the same
+    const decompiled = worldscript.decompile(result);
+    const recompiled = worldscript.compile(decompiled);
+    expect(recompiled.trim()).toBe(expected.trim());
+  });
 });
