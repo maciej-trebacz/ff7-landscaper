@@ -1,38 +1,41 @@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { BattleAutocompleteModal } from '@/components/ui/battle-autocomplete'
 import type { YuffieEncounter } from '@/ff7/encwfile'
+import type { BattleScene } from '@/hooks/types'
 
-interface YuffieEncounterEditorProps {
+interface YuffieEncounterRowProps {
   encounter: YuffieEncounter
   index: number
   onUpdate: (index: number, updates: Partial<YuffieEncounter>) => void
+  battleScenes: BattleScene[]
 }
 
-function YuffieEncounterEditor({ encounter, index, onUpdate }: YuffieEncounterEditorProps) {
+function YuffieEncounterRow({ encounter, index, onUpdate, battleScenes }: YuffieEncounterRowProps) {
   return (
-    <div className="flex items-center gap-2 p-2 border rounded">
-      <Label className="w-16 text-sm font-normal">#{index + 1}</Label>
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
-          <Label className="text-xs">Cloud Lvl:</Label>
-          <Input
-            type="number"
-            min="1"
-            max="99"
-            value={encounter.cloudLevel}
-            onChange={(e) => onUpdate(index, { cloudLevel: parseInt(e.target.value) || 1 })}
-            className="w-16 h-7 text-xs"
-          />
-        </div>
-        <div className="flex items-center gap-1">
-          <Label className="text-xs">Battle ID:</Label>
-          <Input
-            type="number"
-            min="0"
-            max="1023"
+    <div className="flex items-center gap-4 p-3 border rounded">
+      <Label className="w-20 text-sm font-normal flex-shrink-0">#{index + 1}</Label>
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <Label className="text-xs flex-shrink-0">Cloud Lvl:</Label>
+        <Input
+          type="number"
+          min="1"
+          max="99"
+          value={encounter.cloudLevel}
+          onChange={(e) => onUpdate(index, { cloudLevel: parseInt(e.target.value) || 1 })}
+          className="w-20 h-7 text-xs flex-shrink-0"
+        />
+      </div>
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <Label className="text-xs flex-shrink-0">Battle ID:</Label>
+        <div className="flex-1 min-w-0">
+          <BattleAutocompleteModal
+            battleScenes={battleScenes}
             value={encounter.sceneId}
-            onChange={(e) => onUpdate(index, { sceneId: parseInt(e.target.value) || 0 })}
-            className="w-20 h-7 text-xs"
+            onSelect={(id) => {
+              onUpdate(index, { sceneId: id ?? 0 });
+            }}
+            placeholder="Click to search battles..."
           />
         </div>
       </div>
@@ -43,9 +46,10 @@ function YuffieEncounterEditor({ encounter, index, onUpdate }: YuffieEncounterEd
 interface YuffieEncountersProps {
   yuffieEncounters: YuffieEncounter[]
   updateYuffie: (index: number, updates: Partial<YuffieEncounter>) => void
+  battleScenes: BattleScene[]
 }
 
-export function YuffieEncounters({ yuffieEncounters, updateYuffie }: YuffieEncountersProps) {
+export function YuffieEncounters({ yuffieEncounters, updateYuffie, battleScenes }: YuffieEncountersProps) {
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="p-4">
@@ -56,13 +60,14 @@ export function YuffieEncounters({ yuffieEncounters, updateYuffie }: YuffieEncou
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
           {yuffieEncounters.map((encounter, index) => (
-            <YuffieEncounterEditor
+            <YuffieEncounterRow
               key={index}
               encounter={encounter}
               index={index}
               onUpdate={updateYuffie}
+              battleScenes={battleScenes}
             />
           ))}
         </div>

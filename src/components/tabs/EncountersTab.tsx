@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useEncountersState } from '@/hooks/useEncountersState'
+import { useBattleData } from '@/hooks/useBattleData'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
@@ -21,6 +22,7 @@ export function EncountersTab() {
   const [selectedView, setSelectedView] = useState<EncounterView>('regions')
   const [isTerrainDialogOpen, setIsTerrainDialogOpen] = useState(false)
   const { data, exeData, updateEncounterMeta, updateEncounterPair, updateYuffie, updateChocobo } = useEncountersState()
+  const { battleScenes } = useBattleData()
 
   // Reset selected set to 0 when region changes
   useEffect(() => {
@@ -117,6 +119,7 @@ export function EncountersTab() {
             onSelectedSetChange={setSelectedSet}
             regionData={regionData}
             exeData={exeData}
+            battleScenes={battleScenes}
             updateEncounterMeta={updateEncounterMeta}
             updateEncounterPair={updateEncounterPair}
           />
@@ -126,12 +129,14 @@ export function EncountersTab() {
         <YuffieEncounters
           yuffieEncounters={data.yuffieEncounters}
           updateYuffie={updateYuffie}
+          battleScenes={battleScenes}
         />
       )}
       {selectedView === 'chocobo' && (
         <ChocoboEncounters
           chocoboRatings={data.chocoboRatings}
           updateChocobo={updateChocobo}
+          battleScenes={battleScenes}
         />
       )}
     </div>

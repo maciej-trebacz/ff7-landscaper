@@ -1,8 +1,9 @@
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { BattleAutocompleteModal } from '@/components/ui/battle-autocomplete'
 import type { ChocoboRating } from '@/ff7/encwfile'
 import { ChocoboRating as ChocoboRatingEnum } from '@/hooks/types'
+import type { BattleScene } from '@/hooks/types'
 
 // Get chocobo rating names from the enum
 const getChocoboRatingNames = (): string[] => {
@@ -19,46 +20,47 @@ const getChocoboRatingNames = (): string[] => {
 
 const CHOCOBO_RATING_NAMES = getChocoboRatingNames()
 
-interface ChocoboEncounterEditorProps {
+interface ChocoboEncounterRowProps {
   encounter: ChocoboRating
   index: number
   onUpdate: (index: number, updates: Partial<ChocoboRating>) => void
+  battleScenes: BattleScene[]
 }
 
-function ChocoboEncounterEditor({ encounter, index, onUpdate }: ChocoboEncounterEditorProps) {
+function ChocoboEncounterRow({ encounter, index, onUpdate, battleScenes }: ChocoboEncounterRowProps) {
   return (
-    <div className="flex items-center gap-2 p-2 border rounded">
-      <Label className="w-12 text-sm font-normal">#{index + 1}</Label>
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
-          <Label className="text-xs">Battle ID:</Label>
-          <Input
-            type="number"
-            min="0"
-            max="1023"
+    <div className="flex items-center gap-4 p-3 border rounded">
+      <Label className="w-16 text-sm font-normal flex-shrink-0">#{index + 1}</Label>
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <Label className="text-xs flex-shrink-0">Battle ID:</Label>
+        <div className="flex-1 min-w-0">
+          <BattleAutocompleteModal
+            battleScenes={battleScenes}
             value={encounter.battleSceneId}
-            onChange={(e) => onUpdate(index, { battleSceneId: parseInt(e.target.value) || 0 })}
-            className="w-20 h-7 text-xs"
+            onSelect={(id) => {
+              onUpdate(index, { battleSceneId: id ?? 0 });
+            }}
+            placeholder="Click to search battles..."
           />
         </div>
-        <div className="flex items-center gap-1">
-          <Label className="text-xs">Rating:</Label>
-          <Select
-            value={encounter.rating.toString()}
-            onValueChange={(value) => onUpdate(index, { rating: parseInt(value) })}
-          >
-            <SelectTrigger className="w-28 h-7 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CHOCOBO_RATING_NAMES.map((name, ratingIndex) => (
-                <SelectItem key={ratingIndex + 1} value={(ratingIndex + 1).toString()}>
-                  {name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      </div>
+      <div className="flex items-center gap-2 w-40 flex-shrink-0">
+        <Label className="text-xs flex-shrink-0">Rating:</Label>
+        <Select
+          value={encounter.rating.toString()}
+          onValueChange={(value) => onUpdate(index, { rating: parseInt(value) })}
+        >
+          <SelectTrigger className="w-32 h-7 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CHOCOBO_RATING_NAMES.map((name, ratingIndex) => (
+              <SelectItem key={ratingIndex + 1} value={(ratingIndex + 1).toString()}>
+                {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   )
@@ -67,11 +69,13 @@ function ChocoboEncounterEditor({ encounter, index, onUpdate }: ChocoboEncounter
 interface ChocoboEncountersProps {
   chocoboRatings: ChocoboRating[]
   updateChocobo: (index: number, updates: Partial<ChocoboRating>) => void
+  battleScenes: BattleScene[]
 }
 
 export function ChocoboEncounters({
   chocoboRatings,
-  updateChocobo
+  updateChocobo,
+  battleScenes
 }: ChocoboEncountersProps) {
 
   return (
@@ -84,13 +88,14 @@ export function ChocoboEncounters({
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
           {chocoboRatings.map((rating, index) => (
-            <ChocoboEncounterEditor
+            <ChocoboEncounterRow
               key={index}
               encounter={rating}
               index={index}
               onUpdate={updateChocobo}
+              battleScenes={battleScenes}
             />
           ))}
         </div>

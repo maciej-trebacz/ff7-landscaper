@@ -1,5 +1,6 @@
 use ff7_lib::ff7;
 use ff7_lib::ff7::addresses::FF7Addresses;
+use ff7_lib::ff7::types::Scene;
 use ff7_lib::utils::memory::write_memory_buffer;
 use ff7_lib::utils::process;
 use tauri::ipc::Invoke;
@@ -36,6 +37,11 @@ pub async fn execute_update(app: tauri::AppHandle) -> Result<(), String> {
     perform_update(app).await.map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub async fn read_battle_scenes(game_directory: String) -> Result<Vec<Scene>, String> {
+    ff7::data::battle::read_scene_bin_from_path(&std::path::Path::new(&game_directory).join("data/lang-en/battle/scene.bin"))
+}
+
 pub fn generate_handler() -> impl Fn(Invoke<tauri::Wry>) -> bool + Send + Sync {
     tauri::generate_handler![
         update_mes_data,
@@ -43,5 +49,6 @@ pub fn generate_handler() -> impl Fn(Invoke<tauri::Wry>) -> bool + Send + Sync {
         read_ff7_data,
         check_for_updates,
         execute_update,
+        read_battle_scenes,
     ]
 }

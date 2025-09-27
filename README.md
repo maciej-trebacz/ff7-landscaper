@@ -14,9 +14,9 @@
 * [x] Add "Open Script" button next to Script ID in the Triangle sidebar
 * [x] "Go to script" button for messages
 * [x] Text preview & autosizing for messages
-* [ ] Autosizing does not work correctly when custom codes are used (e.g. colors)
+* [x] Autosizing does not work correctly when custom codes are used (e.g. colors)
 * [x] Adding / removing messages
-* [ ] Battle ID picker (from Ultima)
+* [x] Battle ID picker (from Ultima)
 * [ ] Scrolling past the list on any tab makes the whole tab scroll too much
 
 Map

@@ -1,10 +1,11 @@
 {
-  "version": "1.0.0",
-  "pub_date": "2025-09-26T17:00:00+02:00",
+  "version": "1.0.1",
+  "pub_date": "2025-09-27T17:00:00+02:00",
+  "notes": "Add battle scene picker for encounter & script editors",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRWktFU284d290Tnp2T3ZhY2M4VkZneTNEWCtYb1BnQkJxNUQ4cXU2eWg4QW94NkhYR3NNcUhwMDJRV2ZZOXZlNUxTZEIyWWFKelZEbjNKU3ljOVREZUJDQWswM3JaeUFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzU4ODk4NzI2CWZpbGU6RkY3IExhbmRzY2FwZXJfMS4wLjBfeDY0LXNldHVwLmV4ZQp2bElwNE9WTlJPaTNzZWcwS084U3JXU3BPYlVXRGc0Q3pkcFUrNzNzUmpUc2srUEhTb1MwK3UxTTF6b2hpdk55WUxKUWw1dytmVjU2cGYwZnBHeU9BZz09Cg==",
-      "url": "https://github.com/maciej-trebacz/ff7-landscaper/releases/download/1.0.0/FF7.Landscaper_1.0.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRWktFU284d290TjROaXJNeTBGbkVUUTRoTitIVkNVQ2hOQUpMWEpnZUxzSHpuSFdJLzlKL0krc3R4eE9UUlRDTWV0d0xCVlArUkdqb0ZaaStHOFBHZGZleTJ1WjNTalFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzU5MDAwMTkxCWZpbGU6RkY3IExhbmRzY2FwZXJfMS4wLjFfeDY0LXNldHVwLmV4ZQpYV2pWV2pwVzB2SWgxWlN1cjlZSG1ORVdSRDlrYld2aVZnbk8zdGZBNStPTWthcUlXT1RuM1l4YzZaellRV3dUdllqU2NKN1YvYTVjNktvT3BnbUlBdz09Cg==",
+      "url": "https://github.com/maciej-trebacz/ff7-landscaper/releases/download/1.0.1/FF7.Landscaper_1.0.1_x64-setup.exe"
     }
   }
 }
