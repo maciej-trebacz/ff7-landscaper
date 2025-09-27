@@ -16,11 +16,7 @@ pub fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
-            let handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                updater::update(handle).await.unwrap();
-            });
+        .setup(|_app| {
             Ok(())
         })
         .invoke_handler(commands::generate_handler())

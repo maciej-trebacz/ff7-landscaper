@@ -17,6 +17,7 @@
 * [ ] Autosizing does not work correctly when custom codes are used (e.g. colors)
 * [x] Adding / removing messages
 * [ ] Battle ID picker (from Ultima)
+* [ ] Scrolling past the list on any tab makes the whole tab scroll too much
 
 Map
 * [ ] changes are lost when changing current map, switching to a different tab or changing Alternatives

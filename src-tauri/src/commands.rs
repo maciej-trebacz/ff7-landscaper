@@ -3,6 +3,7 @@ use ff7_lib::ff7::addresses::FF7Addresses;
 use ff7_lib::utils::memory::write_memory_buffer;
 use ff7_lib::utils::process;
 use tauri::ipc::Invoke;
+use crate::updater::{check_updates, perform_update, UpdateInfo};
 
 #[tauri::command]
 pub fn update_mes_data(data: Vec<u8>) -> Result<(), String> {
@@ -25,6 +26,22 @@ pub fn read_ff7_data() -> Result<ff7::FF7Data, String> {
     ff7::read_data()
 }
 
+#[tauri::command]
+pub async fn check_for_updates(app: tauri::AppHandle) -> Result<Option<UpdateInfo>, String> {
+    check_updates(app).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn execute_update(app: tauri::AppHandle) -> Result<(), String> {
+    perform_update(app).await.map_err(|e| e.to_string())
+}
+
 pub fn generate_handler() -> impl Fn(Invoke<tauri::Wry>) -> bool + Send + Sync {
-    tauri::generate_handler![update_mes_data, is_ff7_running, read_ff7_data]
+    tauri::generate_handler![
+        update_mes_data,
+        is_ff7_running,
+        read_ff7_data,
+        check_for_updates,
+        execute_update,
+    ]
 }
