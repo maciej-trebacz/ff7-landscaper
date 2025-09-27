@@ -260,39 +260,98 @@ export class FFTextAutosizer {
     return { width, height };
   }
 
-  // Convert ASCII text to FF7 char codes needed for sizing
+  // Convert FF7 text (with format codes) to FF7 char codes needed for sizing
   private toCodes(text: string): number[] {
     const out: number[] = [];
-    for (let i = 0; i < text.length; i++) {
+    let i = 0;
+
+    while (i < text.length) {
       const ch = text[i];
+
+      // Handle escape sequences
       if (ch === '\\') {
-        // Escapes are not needed for pure ASCII sizing; keep as backslash char
+        if (i + 1 >= text.length) {
+          // Spurious backslash at end, treat as literal
+          out.push(CHARS.NORMAL.indexOf('\\'));
+          break;
+        }
+        i++;
+        const escaped = text[i];
+        const code = CHARS.NORMAL.indexOf(escaped);
+        if (code !== -1) {
+          out.push(code);
+        }
+        // If not found in NORMAL, skip
+        i++;
+        continue;
       }
+
+      // Handle command sequences
+      if (ch === '{') {
+        const end = text.indexOf('}', i);
+        if (end === -1) {
+          // Mismatched brace, treat as literal
+          out.push(CHARS.NORMAL.indexOf('{'));
+          i++;
+          continue;
+        }
+        const command = text.substring(i, end + 1);
+        const code = fieldCommands[command];
+        if (code !== undefined) {
+          out.push(parseInt(code, 16));
+          // Skip extra newline after NEWPAGE
+          if (command === '{NEWPAGE}' && end + 1 < text.length && text[end + 1] === '\n') {
+            i = end + 2;
+          } else {
+            i = end + 1;
+          }
+          continue;
+        }
+        // Unknown command, treat as literal text
+        out.push(CHARS.NORMAL.indexOf('{'));
+        i++;
+        continue;
+      }
+
+      // Handle newlines
       if (ch === '\n') {
         out.push(0xE7); // nline
+        i++;
         continue;
       }
+
+      // Handle carriage returns (normalize CRLF)
       if (ch === '\r') {
-        // Normalize CRLF to single newline; ignore bare CR
+        i++;
         continue;
       }
+
+      // Handle tabs
       if (ch === '\t') {
         out.push(0xE1); // tab
+        i++;
         continue;
       }
-      const code = ch.charCodeAt(0);
-      if (code >= 32 && code <= 126) {
-        // Chars.txt maps ASCII 32..126 in order starting at index 0
-        out.push(code - 32);
-      } else if (code === 160) {
-        // Non-breaking space -> treat as normal space
-        out.push(0);
+
+      // Handle normal characters
+      const code = CHARS.NORMAL.indexOf(ch);
+      if (code !== -1) {
+        out.push(code);
       } else {
-        // Unknown/unsupported -> skip width contribution
-        // Could be extended to a fuller charmap if needed
+        // Character not in NORMAL table, check if it's ASCII
+        const asciiCode = ch.charCodeAt(0);
+        if (asciiCode >= 32 && asciiCode <= 126) {
+          out.push(asciiCode - 32);
+        } else if (asciiCode === 160) {
+          // Non-breaking space -> treat as normal space
+          out.push(0);
+        }
+        // Unknown characters are skipped
       }
+
+      i++;
     }
-    // Append end marker conceptually; width/height code doesn’t need explicit terminator here
+
     return out;
   }
 
