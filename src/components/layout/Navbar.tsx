@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { useState } from "react"
 import { useLgpState } from "@/hooks/useLgpState"
-import { useMapState } from "@/hooks/useMapState"
+import { useMaps } from "@/hooks/useMaps"
 
 import { useScriptsState } from "@/hooks/useScriptState"
 import { useLocationsState } from "@/hooks/useLocationsState"
@@ -24,7 +24,7 @@ export function Navbar() {
   const { setMessage } = useStatusBar()
   const { alert, showAlert, hideAlert, setDataPath, setLoading, unsavedChanges } = useAppState()
   const { saveMessages, loadMessages } = useMessagesState()
-  const { saveMap, loadMap, loadTextures, mapType, loaded, loadedTextures } = useMapState()
+  const { saveMap, loadMap, loadTextures, mapType, loaded, loadedTextures } = useMaps()
   const { saveScripts, loadScripts } = useScriptsState()
   const { saveLocations, loadLocations } = useLocationsState()
   const { saveEncounters, loadEncounters, loadExeFile } = useEncountersState()
@@ -116,11 +116,6 @@ export function Navbar() {
   const mapLoadingRef = useRef<"overworld" | "underwater" | "glacier" | null>(null)
   useEffect(() => {
     if (!opened) return
-    const MAP_ID_BY_TYPE: Record<"overworld" | "underwater" | "glacier", "WM0" | "WM2" | "WM3"> = {
-      overworld: "WM0",
-      underwater: "WM2",
-      glacier: "WM3",
-    }
     if (mapLoadingRef.current === mapType) return
     mapLoadingRef.current = mapType
     ;(async () => {
@@ -133,7 +128,7 @@ export function Navbar() {
             await loadTextures(mapType)
           }
           if (needsMap) {
-            await loadMap(MAP_ID_BY_TYPE[mapType], mapType)
+            await loadMap(mapType)
           }
         }
       } catch (error) {
@@ -257,3 +252,5 @@ export function Navbar() {
     </>
   )
 }
+
+

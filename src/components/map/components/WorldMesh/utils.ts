@@ -46,7 +46,7 @@ export function createTextureAtlas(textures: WorldMapTexture[]): TextureAtlasRes
     
     // Create an ImageData object with alpha channel
     const imageData = new ImageData(
-      new Uint8ClampedArray(pixels.buffer),
+      new Uint8ClampedArray(pixels),
       texture.width,
       texture.height
     );

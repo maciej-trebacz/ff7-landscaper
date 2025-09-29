@@ -3,7 +3,7 @@ import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/comp
 import { Plus, Trash2, Search, ChevronLeft, ChevronRight, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { MapId, MAP_NAMES } from "@/hooks/useMapState"
+import { MapId, MAP_NAMES } from "@/hooks/useMaps"
 import { useScriptsState } from "@/hooks/useScriptState"
 import { FunctionType } from "@/ff7/evfile"
 import { useState, useRef, useCallback, useEffect } from "react"

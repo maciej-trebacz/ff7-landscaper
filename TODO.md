@@ -15,9 +15,9 @@
 
 ## Map
 
-* [ ] changes are lost when changing current map, switching to a different tab or changing Alternatives
-* [ ] saving changes to alternative sections doesn't work
 * [ ] when importing a map we should check the number of vertices and warn user if it's bigger than 122.
+* [x] changes are lost when changing current map, switching to a different tab or changing Alternatives
+* [x] saving changes to alternative sections doesn't work
 * [x] improve camera orbiting/panning
 * [x] importing from .obj does not work properly - sometimes a vertex position will be set to 0, 0, 0
 

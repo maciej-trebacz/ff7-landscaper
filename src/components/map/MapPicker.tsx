@@ -5,7 +5,7 @@ import { OrthographicCamera as ThreeOrthographicCamera } from 'three'
 import { WorldMesh } from './components/WorldMesh'
 import { CAMERA_HEIGHT, MESH_SIZE, SCALE } from './constants'
 import { GridSelectionProvider, useGridSelection } from '@/contexts/GridSelectionContext'
-import { MapMode, MapType, dimensions, useMapState, MESHES_IN_COLUMN, MESHES_IN_ROW } from '@/hooks/useMapState'
+import { MapMode, MapType, dimensions, useMaps, MESHES_IN_COLUMN, MESHES_IN_ROW } from '@/hooks/useMaps'
 
 type MapPickerProps = {
   onPickCell: (meshX: number, meshZ: number) => void
@@ -14,7 +14,7 @@ type MapPickerProps = {
 }
 
 export function MapPicker({ onPickCell, mapType: preferredMapType, preselect }: MapPickerProps) {
-  const { mapType, worldmap } = useMapState()
+  const { mapType, worldmap } = useMaps()
 
   const effectiveType = preferredMapType ?? mapType
 

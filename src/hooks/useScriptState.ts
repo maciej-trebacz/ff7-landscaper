@@ -2,7 +2,7 @@ import { atom, useAtom } from "jotai"
 import { useStatusBar } from "./useStatusBar"
 import { useLgpState } from "./useLgpState"
 import { useAppState } from "./useAppState"
-import { MapId } from "./useMapState"
+import { MapId } from "./useMaps"
 import { EvFile, FF7Function, FunctionType, SystemFunction, ModelFunction, MeshFunction } from "@/ff7/evfile"
 import { Worldscript } from "@/ff7/worldscript/worldscript"
 

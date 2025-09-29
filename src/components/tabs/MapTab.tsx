@@ -1,6 +1,6 @@
 import { TriangleWithVertices } from "@/components/map/types";
-import { MapType, MapMode, useMapState } from "@/hooks/useMapState";
-import { useEffect, useState, useCallback } from "react";
+import { MapType, MapMode, useMaps } from "@/hooks/useMaps";
+import { useState, useCallback } from "react";
 import MapViewer from "../map/MapViewer";
 import { SelectionSidebar } from "@/components/map/components/SelectionSidebar";
 import { ExportImportSidebar } from "@/components/map/components/ExportImportSidebar";
@@ -10,7 +10,16 @@ import { GridSelectionProvider } from '@/contexts/GridSelectionContext';
 type RenderingMode = "terrain" | "textured" | "region" | "scripts";
 
 export function MapTab() {
-  const { textures, mode, setMode, enabledAlternatives, setEnabledAlternatives, loaded, setMapType } = useMapState();
+  const {
+    textures,
+    mode,
+    setMode,
+    enabledAlternatives,
+    setEnabledAlternatives,
+    loaded,
+    setMapType,
+    updateTriangleVertices,
+  } = useMaps();
 
   const [selectedTriangle, setSelectedTriangle] = useState<TriangleWithVertices | null>(null);
   const [renderingMode, setRenderingMode] = useState<RenderingMode>("terrain");
@@ -25,15 +34,47 @@ export function MapTab() {
     }
   }, [mode]);
 
-  // Map loading is centralized in Navbar. We only respond to selection here.
+  const handleVertexChange = useCallback((vertexIndex: number, axis: 'x' | 'y' | 'z', value: string) => {
+    const newValue = parseInt(value, 10);
+    if (Number.isNaN(newValue)) return;
 
-  useEffect(() => {
-    if (selectedTriangle) {
-      console.debug("Selected triangle", selectedTriangle);
-      const texture = textures[selectedTriangle.texture];
-      console.debug("Texture", texture);
+    setSelectedTriangle(prev => {
+      if (!prev) return prev;
+
+      const vertexKeys = ['vertex0', 'vertex1', 'vertex2'] as const;
+      const axisIndex = axis === 'x' ? 0 : axis === 'y' ? 1 : 2;
+
+      const updatedVertices = vertexKeys.map((key, idx) => {
+        const vertex = prev[key];
+        const coords: [number, number, number] = [vertex.x, vertex.y, vertex.z];
+        if (idx === vertexIndex) {
+          coords[axisIndex] = newValue;
+        }
+        return coords;
+      }) as [
+        [number, number, number],
+        [number, number, number],
+        [number, number, number]
+      ];
+
+      updateTriangleVertices(prev, updatedVertices[0], updatedVertices[1], updatedVertices[2]);
+
+      return {
+        ...prev,
+        [vertexKeys[vertexIndex]]: {
+          ...prev[vertexKeys[vertexIndex]],
+          [axis]: newValue,
+        },
+      } as TriangleWithVertices;
+    });
+  }, [updateTriangleVertices]);
+
+  const handleModeChange = (newMode: MapMode) => {
+    setMode(newMode);
+    if (newMode !== 'selection') {
+      setSelectedTriangle(null);
     }
-  }, [selectedTriangle]);
+  };
 
   // If not loaded by the centralized loader yet, show a lightweight message
   if (!loaded) {
@@ -43,43 +84,6 @@ export function MapTab() {
       </div>
     )
   }
-
-  const handleVertexChange = (vertexIndex: number, axis: 'x' | 'y' | 'z', value: string) => {
-    if (!selectedTriangle) return;
-    const newValue = parseInt(value);
-    if (isNaN(newValue)) return;
-
-    // Create a deep copy of the selected triangle
-    const updatedTriangle = { ...selectedTriangle };
-    const targetVertex = `vertex${vertexIndex}` as 'vertex0' | 'vertex1' | 'vertex2';
-    updatedTriangle[targetVertex] = {
-      ...updatedTriangle[targetVertex],
-      [axis]: newValue
-    };
-
-    // Update the vertices array for the 3D update
-    const vertices: [number, number, number][] = [
-      [updatedTriangle.vertex0.x, updatedTriangle.vertex0.y, updatedTriangle.vertex0.z],
-      [updatedTriangle.vertex1.x, updatedTriangle.vertex1.y, updatedTriangle.vertex1.z],
-      [updatedTriangle.vertex2.x, updatedTriangle.vertex2.y, updatedTriangle.vertex2.z]
-    ];
-
-    // Update both the 3D view and the state
-    (window as any).updateTrianglePosition(
-      vertices[0],
-      vertices[1],
-      vertices[2]
-    );
-
-    setSelectedTriangle(updatedTriangle);
-  };
-
-  const handleModeChange = (newMode: MapMode) => {
-    setMode(newMode);
-    if (newMode !== 'selection') {
-      setSelectedTriangle(null);
-    }
-  };
 
   return (
     <GridSelectionProvider>

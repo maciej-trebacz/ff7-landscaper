@@ -5,8 +5,7 @@ import { useGeometry } from './hooks';
 import { useSelectedTriangleGeometry } from './hooks';
 import { RenderingMode } from '../../types';
 import { TriangleWithVertices } from '@/components/map/types';
-import { MapMode, useMapState } from '@/hooks/useMapState';
-import { MESH_SIZE } from '../../constants';
+import { MapMode, useMaps } from '@/hooks/useMaps';
 import { GridOverlay } from '../GridOverlay';
 import { SELECTION_Y_OFFSET } from '../../constants';
 import { useTextureAtlas } from '@/hooks/useTextureAtlas';
@@ -28,22 +27,6 @@ interface WorldMeshProps {
   onWireframeOpacityUpdate?: (updateFn: (cameraHeight: number) => void) => void;
 }
 
-export function useTraceUpdate(props) {
-  const prev = useRef(props);
-  useEffect(() => {
-    const changedProps = Object.entries(props).reduce((ps, [k, v]) => {
-      if (prev.current[k] !== v) {
-        ps[k] = [prev.current[k], v];
-      }
-      return ps;
-    }, {});
-    if (Object.keys(changedProps).length > 0) {
-      console.log('Changed props:', changedProps);
-    }
-    prev.current = props;
-  });
-}
-
 export function WorldMesh({
   renderingMode,
   onTriangleSelect,
@@ -60,7 +43,7 @@ export function WorldMesh({
   preselectedCell,
   onWireframeOpacityUpdate,
 }: WorldMeshProps) {
-  useTraceUpdate({ renderingMode, onTriangleSelect, selectedFaceIndex, debugCanvasRef, mapCenter, rotation, showGrid, disablePainting, wireframe, showNormals, mode, gridActiveOverride, preselectedCell });
+  // useTraceUpdate({ renderingMode, onTriangleSelect, selectedFaceIndex, debugCanvasRef, mapCenter, rotation, showGrid, disablePainting, wireframe, showNormals, mode, gridActiveOverride, preselectedCell });
 
   const [mouseDownPos, setMouseDownPos] = useState<{ x: number; y: number } | null>(null);
   const [paintingMouseDownPos, setPaintingMouseDownPos] = useState<{ x: number; y: number } | null>(null);
@@ -68,15 +51,14 @@ export function WorldMesh({
   const [paintingDragStartMode, setPaintingDragStartMode] = useState<boolean | null>(null);
   const [paintingHasToggled, setPaintingHasToggled] = useState(false);
   const wireframeMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
-  const { textures, worldmap, mapType, addChangedMesh, paintingSelectedTriangles, togglePaintingSelectedTriangle, setTriangleMap } = useMapState();
+  const { textures, worldmap, mapType, paintingSelectedTriangles, togglePaintingSelectedTriangle, setTriangleMap } = useMaps();
 
   const { loadTextureAtlas } = useTextureAtlas();
   const { texture, canvas, texturePositions } = loadTextureAtlas(textures, mapType);
 
-  const { geometry, normalLinesGeometry, triangleMap, updateTriangleUVs, updateTrianglePosition, updateColors, updateTriangleTexture, updateTriangleNormals } = useGeometry(worldmap, mapType, renderingMode, textures, texturePositions);
+  const { geometry, normalLinesGeometry, triangleMap, updateTrianglePosition, updateColors, updateTriangleTexture, updateTriangleNormals } = useGeometry(worldmap, mapType, renderingMode, textures, texturePositions);
   const selectedTriangleGeometry = useSelectedTriangleGeometry(triangleMap, selectedFaceIndex);
 
-  const selectedTriangle = triangleMap?.[selectedFaceIndex];
 
   // Callback to update wireframe opacity based on camera height
   const updateWireframeOpacity = useCallback((cameraHeight: number) => {
@@ -98,28 +80,15 @@ export function WorldMesh({
   // Update triangleMap in global state whenever it changes
   useEffect(() => {
     if (triangleMap) {
-      setTriangleMap(triangleMap, updateColors, updateTriangleTexture, updateTriangleNormals);
+      setTriangleMap(
+        triangleMap,
+        updateColors,
+        updateTriangleTexture,
+        updateTriangleNormals,
+        updateTrianglePosition
+      );
     }
-  }, [triangleMap, setTriangleMap]);
-
-  // Set up global update functions when selected triangle changes
-  useEffect(() => {
-    if (window && selectedTriangle && updateTriangleUVs && updateTrianglePosition) {
-      (window as any).updateTrianglePosition = function(
-        v0: [number, number, number],
-        v1: [number, number, number],
-        v2: [number, number, number]
-      ) {
-        updateTrianglePosition(selectedTriangle, v0, v1, v2);
-        addChangedMesh(selectedTriangle.meshOffsetZ / MESH_SIZE, selectedTriangle.meshOffsetX / MESH_SIZE);
-      }
-    }
-    
-    // Clean up functions when no triangle is selected or functions aren't available
-    return () => {
-      delete (window as any).updateTrianglePosition;
-    }
-  }, [selectedTriangle, updateTrianglePosition]);
+  }, [triangleMap, setTriangleMap, updateColors, updateTriangleTexture, updateTriangleNormals, updateTrianglePosition]);
 
   // Copy the texture atlas to the debug canvas
   useEffect(() => {

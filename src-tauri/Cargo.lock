@@ -1037,7 +1037,7 @@ dependencies = [
 
 [[package]]
 name = "ff7-landscaper"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "ff7-lib",
  "serde",

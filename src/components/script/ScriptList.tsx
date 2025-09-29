@@ -6,7 +6,7 @@ import { modelsMapping, systemScriptNames, modelScriptNames } from "@/ff7/worlds
 import { Plus, Map } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { AddScriptModal } from "@/components/modals/AddScriptModal"
-import { MapId, MAP_NAMES } from "@/hooks/useMapState"
+import { MapId, MAP_NAMES } from "@/hooks/useMaps"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { MapPicker } from "@/components/map/MapPicker"
 

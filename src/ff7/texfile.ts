@@ -10,6 +10,7 @@ export interface WorldMapTexture {
     tex?: TexFile;
     animated?: boolean;
     frames?: number;
+    imageData?: string;
 }
 
 interface PixelFormat {

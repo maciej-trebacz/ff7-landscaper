@@ -503,21 +503,29 @@ export function useGeometry(
 
 
 export function useSelectedTriangleGeometry(triangleMap: TriangleWithVertices[] | null, selectedFaceIndex: number | null) {
-  if (!triangleMap || selectedFaceIndex === null) return null;
+  return useMemo(() => {
+    if (!triangleMap || selectedFaceIndex === null) {
+      return null;
+    }
 
-  const tri = triangleMap[selectedFaceIndex];
-  if (!tri) return null;
+    const tri = triangleMap[selectedFaceIndex];
+    if (!tri) return null;
 
-  const highlightPositions = new Float32Array(9);
-  
-  // Copy the transformed vertices and add Y offset
-  highlightPositions.set([...tri.transformedVertices.v0.slice(0, 1), tri.transformedVertices.v0[1] + SELECTION_Y_OFFSET, ...tri.transformedVertices.v0.slice(2)], 0);
-  highlightPositions.set([...tri.transformedVertices.v1.slice(0, 1), tri.transformedVertices.v1[1] + SELECTION_Y_OFFSET, ...tri.transformedVertices.v1.slice(2)], 3);
-  highlightPositions.set([...tri.transformedVertices.v2.slice(0, 1), tri.transformedVertices.v2[1] + SELECTION_Y_OFFSET, ...tri.transformedVertices.v2.slice(2)], 6);
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(9);
+    positions[0] = tri.transformedVertices.v0[0];
+    positions[1] = tri.transformedVertices.v0[1] + SELECTION_Y_OFFSET;
+    positions[2] = tri.transformedVertices.v0[2];
+    positions[3] = tri.transformedVertices.v1[0];
+    positions[4] = tri.transformedVertices.v1[1] + SELECTION_Y_OFFSET;
+    positions[5] = tri.transformedVertices.v1[2];
+    positions[6] = tri.transformedVertices.v2[0];
+    positions[7] = tri.transformedVertices.v2[1] + SELECTION_Y_OFFSET;
+    positions[8] = tri.transformedVertices.v2[2];
 
-  const selectedGeometry = new THREE.BufferGeometry();
-  selectedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(highlightPositions, 3));
-  selectedGeometry.computeVertexNormals();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.computeVertexNormals();
 
-    return selectedGeometry;
-} 
+    return geometry;
+  }, [triangleMap, selectedFaceIndex]);
+}

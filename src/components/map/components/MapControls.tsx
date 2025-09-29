@@ -3,18 +3,16 @@ import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/comp
 import { RotateCcw, RotateCw, Home, Grid, Grip, Boxes, MousePointer, Download, Brush, Map, ArrowUpRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RenderingMode } from '../types';
-import { MapType, MapMode } from '@/hooks/useMapState';
+import { MapType, MapMode, AlternativeGroup } from '@/hooks/useMaps';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-const ALTERNATIVE_SECTIONS = [
-  { id: 50, name: "Temple of Ancients gone" },
-  { id: 41, name: "Junon Area crater (left)" },
-  { id: 42, name: "Junon Area crater (right)" },
-  { id: 60, name: "Mideel after Lifestream" },
-  { id: 47, name: "Cosmo Canyon crater (left)" },
-  { id: 48, name: "Cosmo Canyon crater (right)" },
-] as const;
+const ALTERNATIVE_GROUPS: { id: AlternativeGroup; name: string; sections: readonly number[] }[] = [
+  { id: 0, name: 'Temple of Ancients gone', sections: [50] },
+  { id: 1, name: 'Junon Area crater', sections: [41, 42] },
+  { id: 2, name: 'Mideel after Lifestream', sections: [60] },
+  { id: 3, name: 'Cosmo Canyon crater', sections: [47, 48] },
+];
 
 interface MapControlsProps {
   onRotate: (direction: 'left' | 'right') => void;
@@ -34,7 +32,7 @@ interface MapControlsProps {
   mode: MapMode;
   onModeChange: (mode: MapMode) => void;
   enabledAlternatives: number[];
-  onAlternativesChange: (ids: number[], section: typeof ALTERNATIVE_SECTIONS[number]) => void;
+  onAlternativesChange: (sections: number[]) => void;
 }
 
 export function MapControls({ 
@@ -57,6 +55,7 @@ export function MapControls({
   enabledAlternatives,
   onAlternativesChange
 }: MapControlsProps) {
+  const activeGroupCount = ALTERNATIVE_GROUPS.reduce((count, group) => group.sections.every(section => enabledAlternatives.includes(section)) ? count + 1 : count, 0);
   return (
     <div className="w-full bg-sidebar border-b border-slate-800/40 flex items-center justify-between gap-2 px-2 py-1">
       {/* Left side - Rendering options and toggles */}
@@ -243,37 +242,41 @@ export function MapControls({
                 className="h-6 relative text-xs font-normal px-2"
               >
                 <Map className="h-3.5 w-3.5" /> Alternatives
-                {enabledAlternatives.length > 0 && (
+                {activeGroupCount > 0 && (
                   <span className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full text-[8px] text-primary-foreground flex items-center justify-center">
-                    {enabledAlternatives.length}
+                    {activeGroupCount}
                   </span>
                 )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[200px] p-2">
               <div className="space-y-2">
-                {ALTERNATIVE_SECTIONS.map((section) => (
-                  <div key={section.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`alt-${section.id}`}
-                      checked={enabledAlternatives.includes(section.id)}
-                      onCheckedChange={(checked) => {
-                        onAlternativesChange(
-                          checked 
-                            ? [...enabledAlternatives, section.id]
-                            : enabledAlternatives.filter(id => id !== section.id),
-                          section
-                        );
-                      }}
-                    />
-                    <label
-                      htmlFor={`alt-${section.id}`}
-                      className="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      {section.name}
-                    </label>
-                  </div>
-                ))}
+                {ALTERNATIVE_GROUPS.map(group => {
+                  const isChecked = group.sections.every(section => enabledAlternatives.includes(section));
+                  return (
+                    <div key={group.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`alt-${group.id}`}
+                        checked={isChecked}
+                        onCheckedChange={checked => {
+                          const next = new Set(enabledAlternatives);
+                          if (checked === true) {
+                            group.sections.forEach(section => next.add(section));
+                          } else {
+                            group.sections.forEach(section => next.delete(section));
+                          }
+                          onAlternativesChange(Array.from(next).sort((a, b) => a - b));
+                        }}
+                      />
+                      <label
+                        htmlFor={`alt-${group.id}`}
+                        className="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {group.name}
+                      </label>
+                    </div>
+                  );
+                })}
               </div>
             </PopoverContent>
           </Popover>
@@ -342,3 +345,7 @@ export function MapControls({
     </div>
   );
 } 
+
+
+
+

@@ -1,6 +1,6 @@
 import { useGridSelection } from '@/contexts/GridSelectionContext';
 import { Button } from '@/components/ui/button';
-import { useMapState } from '@/hooks/useMapState';
+import { useMaps } from '@/hooks/useMaps';
 import { Mesh } from '@/ff7/mapfile';
 import { useTextureAtlas } from '@/hooks/useTextureAtlas';
 import { calcUV } from '@/lib/utils';
@@ -81,7 +81,7 @@ function generateTriangleKey(vertex0: { x: number, y: number, z: number }, verte
 
 export function ExportImport() {
   const { selectedCell } = useGridSelection();
-  const { worldmap, textures, mapType, updateSectionMesh } = useMapState();
+  const { worldmap, textures, mapType, updateSectionMesh } = useMaps();
   const { loadTextureAtlas } = useTextureAtlas();
   const { texturePositions, canvas } = loadTextureAtlas(textures, mapType);
   const [resetNormals, setResetNormals] = useState(false);
@@ -265,7 +265,16 @@ export function ExportImport() {
     }
 
     // Construct a new Mesh object (plain object matching Mesh interface)
-    const newMesh = { vertices, normals, triangles, numVertices: vertices.length, numTriangles: triangles.length, severity: 1 };
+    const newMesh = { 
+      sectionIdx: selectedCell.row,
+      meshIdx: selectedCell.column,
+      vertices, 
+      normals, 
+      triangles, 
+      numVertices: vertices.length, 
+      numTriangles: triangles.length, 
+      severity: 1 
+    };
     return newMesh;
   };
 

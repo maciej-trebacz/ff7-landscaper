@@ -1,5 +1,5 @@
 import { Triangle } from "@/ff7/mapfile";
-import { useMapState } from "@/hooks/useMapState";
+import { useMaps } from "@/hooks/useMaps";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ function createImageFromTexture(pixels: Uint8Array, width: number, height: numbe
 
 export function UVEditor({ triangle, onSave }: UVEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { textures } = useMapState();
+  const { textures } = useMaps();
   const [selectedVertex, setSelectedVertex] = useState<number | null>(null);
   const [uvCoords, setUvCoords] = useState<{ u: number, v: number }[]>([]);
   const [textureImage, setTextureImage] = useState<HTMLImageElement | null>(null);

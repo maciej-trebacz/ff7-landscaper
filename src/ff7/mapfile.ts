@@ -133,6 +133,8 @@ interface RawTriangle {
 }
 
 export interface Mesh {
+    sectionIdx: number;
+    meshIdx: number;
     numTriangles: number;
     numVertices: number;
     triangles: Triangle[];
@@ -147,14 +149,16 @@ export class MapFile {
         this.map = mapParser.parse(mapData);
     }
 
-    readMesh(sectionId: number, meshId: number) {
+    readMesh(sectionIdx: number, meshIdx: number) {
         const lzss = new Lzss();
-        const meshData = this.map.sections[sectionId].meshes[meshId].mesh_data.mesh_data_bytes;
+        const meshData = this.map.sections[sectionIdx].meshes[meshIdx].mesh_data.mesh_data_bytes;
         const decodedMeshData = lzss.decompress(meshData);
         const mesh = meshParser.parse(decodedMeshData);
 
         return { 
             ...mesh, 
+            sectionIdx,
+            meshIdx,
             triangles: mesh.triangles.map((triangle: RawTriangle, idx: number) => ({
                 index: idx,
                 vertex0Idx: triangle.vertex0Index,
@@ -181,7 +185,7 @@ export class MapFile {
         } as Mesh;
     }
 
-    writeMesh(sectionId: number, meshId: number, data: Mesh) {
+    writeMesh(sectionIdx: number, meshIdx: number, data: Mesh) {
         const length = 4 + data.triangles.length * 12 + data.vertices.length * 16
         const out = new Uint8Array(length);
         let pos = 0;
@@ -241,8 +245,8 @@ export class MapFile {
 
         const lzss = new Lzss();
         const bytes = lzss.compress(out);
-        this.map.sections[sectionId].meshes[meshId].mesh_data.mesh_data_bytes = bytes;
-        this.map.sections[sectionId].meshes[meshId].mesh_data.mesh_data_size = bytes.length;
+        this.map.sections[sectionIdx].meshes[meshIdx].mesh_data.mesh_data_bytes = bytes;
+        this.map.sections[sectionIdx].meshes[meshIdx].mesh_data.mesh_data_size = bytes.length;
     }
 
     writeSection(section: Section, out: Uint8Array, pos: number) {

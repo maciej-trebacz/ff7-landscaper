@@ -10,7 +10,7 @@ import { CAMERA_HEIGHT, MESH_SIZE, SCALE, SHOW_DEBUG } from './constants';
 import { CameraDebugInfo, CameraDebugOverlay } from './components/DebugOverlay';
 import { MapControls } from './components/MapControls';
 import { WorldMesh } from './components/WorldMesh';
-import { useMapState, MapType, MapMode, dimensions, MESHES_IN_ROW, MESHES_IN_COLUMN } from '@/hooks/useMapState';
+import { useMaps, MapType, MapMode, dimensions, MESHES_IN_ROW, MESHES_IN_COLUMN } from '@/hooks/useMaps';
 import ModelOverlay from './ModelOverlay';
 
 interface MapViewerProps { 
@@ -28,7 +28,7 @@ interface MapViewerProps {
   onMapTypeChange?: (type: MapType) => void,
   onModeChange?: (mode: MapMode) => void,
   enabledAlternatives: number[],
-  onAlternativesChange: (ids: number[], section: { id: number, name: string }) => void,
+  onAlternativesChange: (ids: number[]) => void,
 }
 
 function MapViewer({ 
@@ -57,7 +57,7 @@ function MapViewer({
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const perspectiveCameraRef = useRef<ThreePerspectiveCamera>(null);
   const orthographicCameraRef = useRef<ThreeOrthographicCamera>(null);
-  const { worldmap, mapType, mapId, mode, setSelectedTriangle } = useMapState();
+  const { worldmap, mapType, mapId, mode, setSelectedTriangle } = useMaps();
   const zoomRef = useRef(1);
   const currentCameraRef = useRef<ThreePerspectiveCamera | ThreeOrthographicCamera | null>(null);
   const updateWireframeOpacityRef = useRef<((cameraHeight: number) => void) | null>(null);

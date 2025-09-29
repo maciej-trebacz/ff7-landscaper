@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { useMapState } from "@/hooks/useMapState";
+import { useMaps } from "@/hooks/useMaps";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -33,7 +33,7 @@ interface CopiedTriangleData {
 }
 
 export function PaintingSidebar() {
-  const { paintingSelectedTriangles, worldmap, updateSelectedTriangles, updateTriangle, textures, togglePaintingSelectedTriangle, triangleMap } = useMapState();
+  const { paintingSelectedTriangles, worldmap, updateSelectedTriangles, updateTriangle, textures, togglePaintingSelectedTriangle, triangleMap } = useMaps();
   const { messages } = useMessagesState();
   const [values, setValues] = useState<PaintingValues>({
     type: null,

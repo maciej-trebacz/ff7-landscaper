@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { Label } from "@/components/ui/label"
 import type { CallContext } from "@/components/script/types"
 import { Description } from "@/components/script/Description"
-import { useMapState } from "@/hooks/useMapState"
+import { useMaps } from "@/hooks/useMaps"
 import { LOCATION_COLORS, MESH_SIZE } from "@/components/map/constants"
 
 export function SetCoordsInMeshUI({
@@ -83,7 +83,7 @@ export function SetCoordsInMeshUI({
     }
   }, [editorHandle, ctx.row])
 
-  const { worldmap, mapType } = useMapState()
+  const { worldmap, mapType } = useMaps()
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !worldmap) return

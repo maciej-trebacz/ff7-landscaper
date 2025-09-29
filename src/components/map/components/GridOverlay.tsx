@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
 import { MESH_SIZE, SCALE } from '../constants';
 import { useGridSelection } from '@/contexts/GridSelectionContext';
-import { useMapState } from '@/hooks/useMapState';
+import { useMaps } from '@/hooks/useMaps';
 
 interface GridOverlayProps {
   worldmapLength: number;
@@ -15,7 +15,7 @@ interface GridOverlayProps {
 export function GridOverlay({ worldmapLength, worldmapWidth, active, preselectedCell }: GridOverlayProps) {
   const [hoveredCell, setHoveredCell] = useState<{ x: number, z: number } | null>(null);
   const { selectCell, selectedCell } = useGridSelection();
-  const { mode } = useMapState();
+  const { mode } = useMaps();
   const isActive = active ?? (mode === "export");
   const cellSize = MESH_SIZE * SCALE;
   const yOffset = 0;

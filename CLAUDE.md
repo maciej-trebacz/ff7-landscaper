@@ -57,7 +57,7 @@ The app works directly with FF7 binary files using TypeScript parsers in `src/ff
 
 Uses Jotai for reactive state with domain-specific hooks:
 - `useAppState` - Global application state
-- `useMapState` - 3D map viewer state
+- `useMaps` - 3D map viewer state
 - `useScriptState` - Script editor state
 - `useMessagesState` - Message editing state
 
@@ -84,7 +84,7 @@ The MapViewer component provides a sophisticated 3D editor for FF7 world maps us
 - **State Management**: Jotai atoms track modifications, mesh updates, triangle selections
 - **Real-time Updates**: Geometry updates immediately via function injection
 
-Key files: `MapViewer.tsx` (main component), `WorldMesh/` (mesh rendering), `useMapState.ts` (state management)
+Key files: `MapViewer.tsx` (main component), `WorldMesh/` (mesh rendering), `useMaps.ts` (state management)
 
 ## Testing
 

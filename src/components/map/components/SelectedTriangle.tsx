@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { useAppState } from "@/hooks/useAppState";
 import { useScriptsState } from "@/hooks/useScriptState";
-import { useMapState, MapType, MapId } from "@/hooks/useMapState";
+import { useMaps, MapType, MapId } from "@/hooks/useMaps";
 import { FunctionType } from "@/ff7/evfile";
 import { MESH_SIZE } from "@/components/map/constants";
 
@@ -33,7 +33,7 @@ interface SelectedTriangleProps {
 
 export function SelectedTriangle({ triangle, textures, onVertexChange }: SelectedTriangleProps) {
   const { messages } = useMessagesState();
-  const { updateSingleTriangle, mapType } = useMapState();
+  const { updateSingleTriangle, mapType } = useMaps();
   const { setCurrentTab } = useAppState();
   const { setScriptType, selectScript, functions, setSelectedMap, loadScripts } = useScriptsState();
 
