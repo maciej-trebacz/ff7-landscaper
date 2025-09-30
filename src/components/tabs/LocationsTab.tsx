@@ -31,7 +31,109 @@ function NumberInput({
   )
 }
 
-// ScenarioEditor removed in favor of a single table layout
+function FieldTrigger({ label, onOpen }: { label: string; onOpen: (rect: DOMRect, width: number) => void }) {
+  const ref = useRef<HTMLButtonElement | null>(null)
+  return (
+    <button
+      ref={ref}
+      type="button"
+      className="relative h-8 w-full rounded-md border border-input bg-transparent px-3 pr-8 text-left text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+      onClick={(e) => {
+        const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+        onOpen(rect, (e.currentTarget as HTMLButtonElement).offsetWidth)
+      }}
+    >
+      <span className="truncate block">{label}</span>
+      <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+    </button>
+  )
+}
+
+function FieldDropdown({ 
+  rect, 
+  width, 
+  fieldOptions, 
+  onSelect, 
+  onClose 
+}: { 
+  rect: DOMRect
+  width: number
+  fieldOptions: Array<{ id: number; label: string }>
+  onSelect: (id: number) => void
+  onClose: () => void 
+}) {
+  const [filter, setFilter] = useState('')
+
+  useEffect(() => {
+    const handler = () => {
+      onClose()
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('mousedown', handler)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('mousedown', handler)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+
+  const CONTAINER_MAX_HEIGHT = 320
+  const HEADER_HEIGHT = 42
+  const LIST_MAX_HEIGHT = CONTAINER_MAX_HEIGHT - HEADER_HEIGHT
+
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))
+  const top = Math.min(rect.bottom + 4, window.innerHeight - (CONTAINER_MAX_HEIGHT + 8))
+  const filtered = filter ? fieldOptions.filter(o => o.label.toLowerCase().includes(filter.toLowerCase())) : fieldOptions
+
+  return createPortal(
+    <div className="fixed inset-0 z-50" style={{ pointerEvents: 'none' }}>
+      <div
+        className="fixed rounded-md border border-zinc-800 bg-zinc-900 text-zinc-100 shadow-xl ring-1 ring-black/10"
+        style={{ left, top, width, maxHeight: CONTAINER_MAX_HEIGHT, pointerEvents: 'auto' }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div
+          className="absolute -top-2 left-4 w-0 h-0"
+          style={{
+            borderLeft: '8px solid transparent',
+            borderRight: '8px solid transparent',
+            borderBottom: '8px solid rgb(24 24 27)',
+            filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))'
+          }}
+        />
+
+        <div className="p-1 border-b border-zinc-800 bg-zinc-900/95 sticky top-0">
+          <Input
+            autoFocus
+            placeholder="Filter..."
+            className="h-8"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}
+          />
+        </div>
+        <div className="overflow-auto p-1" style={{ maxHeight: LIST_MAX_HEIGHT }}>
+          {filtered.map(opt => (
+            <button
+              key={opt.id}
+              type="button"
+              className="w-full text-left px-2 py-1.5 rounded hover:bg-zinc-800 text-sm"
+              onClick={() => { onSelect(opt.id); onClose() }}
+            >
+              {opt.label}
+            </button>
+          ))}
+          {filtered.length === 0 && (
+            <div className="px-2 py-2 text-sm text-zinc-400">No results</div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
 
 export function LocationsTab() {
   const { entries, loaded, updateEntry } = useLocationsState()
@@ -46,97 +148,6 @@ export function LocationsTab() {
 
   type DropdownState = null | { rect: DOMRect; width: number; onSelect: (id: number) => void }
   const [dropdown, setDropdown] = useState<DropdownState>(null)
-  const [filter, setFilter] = useState('')
-
-  function FieldTrigger({ label, onOpen }: { label: string; onOpen: (rect: DOMRect, width: number) => void }) {
-    const ref = useRef<HTMLButtonElement | null>(null)
-    return (
-      <button
-        ref={ref}
-        type="button"
-        className="relative h-8 w-full rounded-md border border-input bg-transparent px-3 pr-8 text-left text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-        onClick={(e) => {
-          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
-          onOpen(rect, (e.currentTarget as HTMLButtonElement).offsetWidth)
-        }}
-      >
-        <span className="truncate block">{label}</span>
-        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
-      </button>
-    )
-  }
-
-  function FieldDropdown({ rect, width, onSelect, onClose }: { rect: DOMRect; width: number; onSelect: (id: number) => void; onClose: () => void }) {
-    useEffect(() => {
-      const handler = () => {
-        onClose()
-      }
-      const onKey = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') onClose()
-      }
-      window.addEventListener('mousedown', handler)
-      window.addEventListener('keydown', onKey)
-      return () => {
-        window.removeEventListener('mousedown', handler)
-        window.removeEventListener('keydown', onKey)
-      }
-    }, [onClose])
-
-    const CONTAINER_MAX_HEIGHT = 320
-    const HEADER_HEIGHT = 42
-    const LIST_MAX_HEIGHT = CONTAINER_MAX_HEIGHT - HEADER_HEIGHT
-
-    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))
-    const top = Math.min(rect.bottom + 4, window.innerHeight - (CONTAINER_MAX_HEIGHT + 8))
-    const filtered = filter ? fieldOptions.filter(o => o.label.toLowerCase().includes(filter.toLowerCase())) : fieldOptions
-
-    return createPortal(
-      <div className="fixed inset-0 z-50" style={{ pointerEvents: 'none' }}>
-        <div
-          className="fixed rounded-md border border-zinc-800 bg-zinc-900 text-zinc-100 shadow-xl ring-1 ring-black/10"
-          style={{ left, top, width, maxHeight: CONTAINER_MAX_HEIGHT, pointerEvents: 'auto' }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <div
-            className="absolute -top-2 left-4 w-0 h-0"
-            style={{
-              borderLeft: '8px solid transparent',
-              borderRight: '8px solid transparent',
-              borderBottom: '8px solid rgb(24 24 27)',
-              filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))'
-            }}
-          />
-
-          <div className="p-1 border-b border-zinc-800 bg-zinc-900/95 sticky top-0">
-            <Input
-              autoFocus
-              placeholder="Filter..."
-              className="h-8"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}
-            />
-          </div>
-          <div className="overflow-auto p-1" style={{ maxHeight: LIST_MAX_HEIGHT }}>
-            {filtered.map(opt => (
-              <button
-                key={opt.id}
-                type="button"
-                className="w-full text-left px-2 py-1.5 rounded hover:bg-zinc-800 text-sm"
-                onClick={() => { onSelect(opt.id); onClose() }}
-              >
-                {opt.label}
-              </button>
-            ))}
-            {filtered.length === 0 && (
-              <div className="px-2 py-2 text-sm text-zinc-400">No results</div>
-            )}
-          </div>
-        </div>
-      </div>,
-      document.body
-    )
-  }
 
 
   if (!loaded) {
@@ -201,8 +212,9 @@ export function LocationsTab() {
           <FieldDropdown
             rect={dropdown.rect}
             width={dropdown.width}
+            fieldOptions={fieldOptions}
             onSelect={dropdown.onSelect}
-            onClose={() => { setDropdown(null); setFilter('') }}
+            onClose={() => setDropdown(null)}
           />
         )}
       </ScrollArea>

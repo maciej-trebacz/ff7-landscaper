@@ -211,9 +211,9 @@ export function RegionEncounters({
         <div className="mb-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-medium">Region {selectedRegion}: {ENCOUNTER_REGION_NAMES[selectedRegion]}</h3>
+              <h3 className="text-lg font-medium">{ENCOUNTER_REGION_NAMES[selectedRegion]}</h3>
               <p className="text-sm text-muted-foreground">
-                Configure encounter sets for this region
+                Region {selectedRegion}
               </p>
             </div>
             <div className="flex items-center gap-2">
