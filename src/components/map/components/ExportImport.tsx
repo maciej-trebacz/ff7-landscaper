@@ -101,8 +101,13 @@ export function ExportImport() {
 
     // Create a hash map of existing triangles from the current mesh
     const existingTriangles = new Map<string, { type: number, locationId: number, script: number, isChocobo: boolean }>();
+    let originalSectionIdx = 0;
+    let originalMeshIdx = 0;
     if (worldmap && selectedCell) {
       const currentMesh = worldmap[selectedCell.row][selectedCell.column];
+      // Preserve original file indices to ensure save targets the correct section/mesh
+      originalSectionIdx = currentMesh.sectionIdx;
+      originalMeshIdx = currentMesh.meshIdx;
       currentMesh.triangles.forEach(triangle => {
         const key = generateTriangleKey(
           triangle.vertex0,
@@ -266,8 +271,8 @@ export function ExportImport() {
 
     // Construct a new Mesh object (plain object matching Mesh interface)
     const newMesh = { 
-      sectionIdx: selectedCell.row,
-      meshIdx: selectedCell.column,
+      sectionIdx: originalSectionIdx,
+      meshIdx: originalMeshIdx,
       vertices, 
       normals, 
       triangles, 

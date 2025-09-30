@@ -1,6 +1,7 @@
 ## General
 
 * [ ] Scrolling past the list on any tab makes the whole tab scroll too much
+* [ ] When switching maps the text "Loading map..." text persists in the status bar
 * [x] in system_13 there's a wrong type coercion (2nd param is angle offset, not model id):
 * [x] Entity.rotate_to_model(Entities.wild_chocobo, Entities.cloud) also this should use the direction component
 * [x] Export mode - it should always reset the camera roll/pitch and show the map grid

@@ -4,7 +4,7 @@
   "notes": "Fixed saving changes to alternative sections & performance improvements",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRWktFU284d290TjNYVlRJajZZT1hQeDBIOEErcmFpTmZqWDlXYzRTVTkzOEFsYVQvWm9kcDYrb3hoMG1PZFFzWVJZRDRlOXl6ci9rY3Y4TUt1RGRraTRZaTBHNzhsRUFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzU5MTQ4OTI5CWZpbGU6RkY3IExhbmRzY2FwZXJfMS4wLjJfeDY0LXNldHVwLmV4ZQpreGIzUElTVGk5WE1EVHFNbEcyeG1rbkZvaUcwaGtndEYvc3lVM25Na1pyRXQwRVZ5N0x2VEFhUnRXd0ZiZkYrLzRPeEVvRlRWakE1cVpHZUdqd0NBZz09Cg==",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRWktFU284d290TjNmbmhSeHVoMWt6THQ5SXoyaXhsVG9TZURadkNOTXI2Tk10NjJhQmhsTCtuM2xOU2FaUlQ3STdWWUdpSHhFUzB5eEdVRmFhV3haTWRUU3ZaOWtGZFFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzU5MTUwMjQ1CWZpbGU6RkY3IExhbmRzY2FwZXJfMS4wLjJfeDY0LXNldHVwLmV4ZQpad0RHTHlxQjdmZTE4TmgvUHZ0VGVYYXVEOXZsS3dFaFBLdnM4Zzc4cmhxU2hLakdNdGFNN1dCdm01TmFyNmhYQnY3RUpyanlhMUhkKzR3bk9DbnREUT09Cg==",
       "url": "https://github.com/maciej-trebacz/ff7-landscaper/releases/download/1.0.2/FF7.Landscaper_1.0.2_x64-setup.exe"
     }
   }
