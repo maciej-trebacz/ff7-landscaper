@@ -101,9 +101,10 @@ export function useLocationsState() {
         setMessage('No locations loaded to save', true)
         return
       }
+      setMessage('Saving locations...')
       const data = state.file.writeFile()
       await setFile('field.tbl', data)
-      setMessage('Locations saved successfully!')
+      console.debug('Locations saved successfully!')
       clearUnsavedChanges()
     } catch (error) {
       console.error('[Locations] Failed to save field.tbl', error)

@@ -67,13 +67,13 @@ export function useMessagesState() {
 
   const saveMessages = async () => {
     try {
-      console.debug("[Messages] Saving messages")
+      setMessage('Saving messages...')
+
       const mesFile = new MesFile()
       mesFile.setMessages(state.messages)
-
       const newData = mesFile.writeMessages()
       await setFile("mes", newData)
-      setMessage("Messages saved successfully")
+      console.debug("Messages saved successfully")
       clearUnsavedChanges()
     } catch (error) {
       console.error("[Messages] Failed to save messages:", error)

@@ -40,7 +40,7 @@ export function useEncountersState() {
 
   const loadEncounters = async () => {
     try {
-      console.log('Loading encounters...')
+      console.debug('Loading encounters...')
       const data = await readEncW(getFile)
       const file = new EncWFile(data)
       setState(prev => ({ ...prev, file, data: file.data, loaded: true }))
@@ -56,9 +56,10 @@ export function useEncountersState() {
         setMessage('No encounters loaded to save', true)
         return
       }
+      setMessage('Saving encounters...')
       const data = state.file.writeFile()
       await setFile('enc_w.bin', data)
-      setMessage('Encounters saved successfully!')
+      console.debug('Encounters saved successfully!')
       clearUnsavedChanges()
     } catch (error) {
       console.error('[Encounters] Failed to save enc_w.bin', error)
@@ -194,7 +195,7 @@ export function useEncountersState() {
       const path = `${dataPath}/ff7_en.exe`
       const data = state.exeFile.writeFile()
       await writeFile(path, data)
-      setMessage('FF7 executable saved successfully!')
+      console.debug('FF7 executable saved successfully!')
       clearUnsavedChanges()
     } catch (error) {
       console.error('[EXE] Failed to save ff7_en.exe', error)

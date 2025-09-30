@@ -610,7 +610,6 @@ export function useScriptsState() {
     }
 
     try {
-      console.time("[Scripts] Saving scripts")
       setMessage("Compiling and saving scripts...")
 
       // Create a copy of the EvFile to work with
@@ -656,8 +655,7 @@ export function useScriptsState() {
       const filename = state.selectedMap.toLowerCase() + ".ev"
       await setFile(filename, evData)
 
-      console.timeEnd("[Scripts] Saving scripts")
-      setMessage("Scripts saved successfully!")
+      console.debug("Scripts saved successfully!")
       setState((prev) => ({ ...prev, modifiedScripts: new Set() })) // Clear modified scripts tracking
       clearUnsavedChanges()
     } catch (error) {

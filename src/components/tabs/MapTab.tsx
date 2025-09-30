@@ -1,11 +1,12 @@
 import { TriangleWithVertices } from "@/components/map/types";
 import { MapType, MapMode, useMaps } from "@/hooks/useMaps";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import MapViewer from "../map/MapViewer";
 import { SelectionSidebar } from "@/components/map/components/SelectionSidebar";
 import { ExportImportSidebar } from "@/components/map/components/ExportImportSidebar";
 import { PaintingSidebar } from "@/components/map/components/PaintingSidebar";
 import { GridSelectionProvider } from '@/contexts/GridSelectionContext';
+import { useStatusBar } from "@/hooks/useStatusBar";
 
 type RenderingMode = "terrain" | "textured" | "region" | "scripts";
 
@@ -19,13 +20,19 @@ export function MapTab() {
     loaded,
     setMapType,
     updateTriangleVertices,
+    loadMap,
+    loadTextures,
+    loadedTextures,
+    mapType,
   } = useMaps();
+  const { setMessage } = useStatusBar();
 
   const [selectedTriangle, setSelectedTriangle] = useState<TriangleWithVertices | null>(null);
   const [renderingMode, setRenderingMode] = useState<RenderingMode>("terrain");
   const [showWireframe, setShowWireframe] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [showNormals, setShowNormals] = useState(false);
+  const hasInitializedRef = useRef(false);
 
   // Memoize the triangle select callback to prevent rerenders
   const handleTriangleSelect = useCallback((triangle: TriangleWithVertices | null) => {
@@ -76,20 +83,40 @@ export function MapTab() {
     }
   };
 
-  // If not loaded by the centralized loader yet, show a lightweight message
-  if (!loaded) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
-        Loading map...
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (loaded) {
+      hasInitializedRef.current = true;
+    }
+  }, [loaded]);
+
+  useEffect(() => {
+    if (!hasInitializedRef.current) return;
+
+    const needsMap = !loaded;
+    const needsTextures = !loadedTextures[mapType];
+    if (!needsMap && !needsTextures) return;
+
+    (async () => {
+      try {
+        if (needsTextures) {
+          await loadTextures(mapType);
+        }
+
+        if (needsMap) {
+          await loadMap(mapType);
+        }
+      } catch (error) {
+        console.error("[MapTab] Error loading map:", error);
+      }
+    })();
+  }, [loadMap, loadTextures, loaded, loadedTextures, mapType, setMessage]);
 
   return (
     <GridSelectionProvider>
       <div className="flex h-full w-full">
         <div className="flex-1">
           <MapViewer
+            isLoading={!loaded}
             renderingMode={renderingMode}
             showGrid={showGrid}
             onTriangleSelect={handleTriangleSelect}

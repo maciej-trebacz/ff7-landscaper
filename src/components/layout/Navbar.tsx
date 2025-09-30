@@ -18,13 +18,13 @@ import { useLocationsState } from "@/hooks/useLocationsState"
 import { useKeyboardShortcuts, getShortcutDisplay } from "@/hooks/useKeyboardShortcuts"
 import { useEncountersState } from "@/hooks/useEncountersState"
 import { useTextureAtlas } from "@/hooks/useTextureAtlas"
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 
 export function Navbar() {
   const { setMessage } = useStatusBar()
   const { alert, showAlert, hideAlert, setDataPath, setLoading, unsavedChanges } = useAppState()
   const { saveMessages, loadMessages } = useMessagesState()
-  const { saveMap, loadMap, loadTextures, mapType, loaded, loadedTextures } = useMaps()
+  const { saveMap, loadMap, mapType } = useMaps()
   const { saveScripts, loadScripts } = useScriptsState()
   const { saveLocations, loadLocations } = useLocationsState()
   const { saveEncounters, loadEncounters, loadExeFile } = useEncountersState()
@@ -102,10 +102,13 @@ export function Navbar() {
       setMessage("Loading locations...")
       await loadLocations()
 
+      setMessage("Loading map...")
+      await loadMap(mapType)
+
       setMessage("Loading scripts...")
       await loadScripts("WM0" as any)
 
-      setMessage("Game data loaded successfully")
+      setMessage("Game data loaded successfully!")
       setLoading(false)
     }
 
@@ -113,32 +116,6 @@ export function Navbar() {
   }, [opened, openedTime])
 
   // Centralized map loading on mapType changes (and initial)
-  const mapLoadingRef = useRef<"overworld" | "underwater" | "glacier" | null>(null)
-  useEffect(() => {
-    if (!opened) return
-    if (mapLoadingRef.current === mapType) return
-    mapLoadingRef.current = mapType
-    ;(async () => {
-      try {
-        const needsTextures = !loadedTextures[mapType]
-        const needsMap = !loaded
-        if (needsTextures || needsMap) {
-          setMessage(`Loading map (${mapType})...`)
-          if (needsTextures) {
-            await loadTextures(mapType)
-          }
-          if (needsMap) {
-            await loadMap(mapType)
-          }
-        }
-      } catch (error) {
-        console.error("[Navbar] Error loading map:", error)
-      } finally {
-        mapLoadingRef.current = null
-      }
-    })()
-  }, [mapType, opened, loaded, loadedTextures])
-
   const handleSave = async () => {
     try {
       clearFocus()
@@ -147,6 +124,7 @@ export function Navbar() {
       await saveScripts()
       await saveLocations()
       await saveEncounters()
+      setMessage("Game data saved successfully!")
     } catch (error) {
       showAlert("Error", (error as Error).message)
     }

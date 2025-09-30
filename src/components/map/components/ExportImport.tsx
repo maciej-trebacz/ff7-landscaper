@@ -291,6 +291,19 @@ export function ExportImport() {
       const text = e.target?.result as string;
       try {
         const newMesh = parseObjFile(text);
+
+        // Check vertex count and prompt user if too many vertices
+        if (newMesh.vertices.length > 122) {
+          const proceed = confirm("Importing a mesh with more than 122 vertices will cause visual glitches in the game. Do you want to proceed?");
+          if (!proceed) {
+            // Reset the file input value so the same file can be imported again
+            if (fileInputRef.current) {
+              fileInputRef.current.value = '';
+            }
+            return;
+          }
+        }
+
         // Update the worldmap for the selected cell using updateSectionMesh
         updateSectionMesh(selectedCell.row, selectedCell.column, newMesh);
         console.log('Imported mesh', newMesh);
