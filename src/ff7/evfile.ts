@@ -345,6 +345,37 @@ export class EvFile {
         return newFunction;
     }
 
+    addSystemFunction(functionId: number): FF7Function {
+        // Check if function already exists
+        const existingFunction = this.functions.find(fn =>
+            fn.type === FunctionType.System &&
+            fn.id === functionId
+        );
+
+        if (existingFunction) {
+            throw new Error(`System function ${functionId} already exists`);
+        }
+
+        // Create new system function with just a RETURN opcode
+        const newFunction: SystemFunction = {
+            type: FunctionType.System,
+            id: functionId,
+            header: this.calculateHeader({ type: FunctionType.System, id: functionId } as SystemFunction),
+            offset: 0, // Will be calculated during writeFile
+            script: "RETURN"
+        };
+
+        this.functions.push(newFunction);
+        return newFunction;
+    }
+
+    deleteFunction(index: number) {
+        if (index < 0 || index >= this.functions.length) {
+            throw new Error(`Function index ${index} is out of bounds`);
+        }
+        this.functions.splice(index, 1);
+    }
+
     writeFile() {
         const out = new Uint8Array(0x7000);
         const view = new DataView(out.buffer);

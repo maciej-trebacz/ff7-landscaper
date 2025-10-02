@@ -3,12 +3,14 @@ import { useScriptsState } from "@/hooks/useScriptState"
 import { Button } from "@/components/ui/button"
 import { FF7Function, FunctionType } from "@/ff7/evfile"
 import { modelsMapping, systemScriptNames, modelScriptNames } from "@/ff7/worldscript/constants"
-import { Plus, Map } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
-import { AddScriptModal } from "@/components/modals/AddScriptModal"
+import { Map } from "lucide-react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { MapId, MAP_NAMES } from "@/hooks/useMaps"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { MapPicker } from "@/components/map/MapPicker"
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { confirm } from "@tauri-apps/plugin-dialog"
+import { AddScriptModal } from "@/components/modals/AddScriptModal"
 
 interface ScriptListProps {
   className?: string
@@ -57,8 +59,6 @@ export function ScriptList({ className }: ScriptListProps) {
     selectedMap,
     selectScript,
     isScriptSelected,
-    addModelScript,
-    addMeshScript,
     selectedScript,
     searchQuery,
     searchResults,
@@ -66,11 +66,28 @@ export function ScriptList({ className }: ScriptListProps) {
     setSelectedMap,
     setScriptType: setScriptTypeHook,
     loadScripts,
-    isScriptModified
+    isScriptModified,
+    addMeshScript
   } = useScriptsState()
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isMapPickerOpen, setIsMapPickerOpen] = useState(false)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [newMeshCoords, setNewMeshCoords] = useState<{ x: number; y: number } | null>(null)
   const selectedItemRef = useRef<HTMLButtonElement | null>(null)
+  const filteredScriptsRef = useRef<FF7Function[]>([])
+  const selectScriptRef = useRef(selectScript)
+  const pickInProgressRef = useRef(false)
+
+  const handleAddScript = async (params: any) => {
+    try {
+      if (params.type === "mesh") {
+        await addMeshScript(params.x, params.y, params.functionId)
+      }
+    } catch (error) {
+      // Error is already handled in the hook
+    }
+    setIsAddModalOpen(false)
+    setNewMeshCoords(null)
+  }
 
   // Filter and sort scripts
   const filteredScripts = functions
@@ -113,19 +130,41 @@ export function ScriptList({ className }: ScriptListProps) {
     }
   }, [selectedScript, scriptType, filteredScripts.length])
 
-  const handleAddScript = async (params: any) => {
-    try {
-      if (params.type === "model") {
-        await addModelScript(params.modelId, params.functionId)
-      } else if (params.type === "mesh") {
-        await addMeshScript(params.x, params.y, params.functionId)
-      }
-    } catch (error) {
-      // Error is already handled in the hook
-    }
-  }
+  // Keep refs in sync but stable callback identity
+  useEffect(() => {
+    filteredScriptsRef.current = filteredScripts
+  }, [filteredScripts])
 
-  const canAddScripts = scriptType === FunctionType.Model || scriptType === FunctionType.Mesh
+  useEffect(() => {
+    selectScriptRef.current = selectScript
+  }, [selectScript])
+
+  const handlePickCell = useCallback(async (mx: number, mz: number) => {
+    if (pickInProgressRef.current) return
+    pickInProgressRef.current = true
+    try {
+
+      const matchingScript = filteredScriptsRef.current.find(
+        (script) => script.type === FunctionType.Mesh && script.x === mz && script.y === mx
+      )
+      if (matchingScript) {
+        selectScriptRef.current(matchingScript)
+        setIsMapPickerOpen(false)
+        return
+      }
+
+      const confirmed = await confirm("There are no scripts for selected mesh. Do you want to create one?", {
+        title: "Create New Mesh Script"
+      })
+      if (confirmed) {
+        setIsMapPickerOpen(false)
+        setNewMeshCoords({ x: mx, y: mz })
+        setIsAddModalOpen(true)
+      }
+    } finally {
+      pickInProgressRef.current = false
+    }
+  }, [])
 
   // Search functionality
   const isInSearchMode = searchQuery.length >= 3
@@ -164,7 +203,6 @@ export function ScriptList({ className }: ScriptListProps) {
 
   return (
     <div className={cn("bg-background p-2", className)}>
-
       {isInSearchMode ? (
         /* Search Mode */
         <div className="space-y-2">
@@ -188,7 +226,7 @@ export function ScriptList({ className }: ScriptListProps) {
                   <div key={type} className="space-y-1">
                     {/* Type Header */}
                     <div className="text-xs font-medium text-muted-foreground ml-2">
-                      {type === '0' ? 'System Scripts' : type === '1' ? 'Model Scripts' : 'Mesh Scripts'}
+                      {type === "0" ? "System Scripts" : type === "1" ? "Model Scripts" : "Mesh Scripts"}
                     </div>
 
                     {/* Scripts */}
@@ -196,27 +234,27 @@ export function ScriptList({ className }: ScriptListProps) {
                       {results
                         .filter((result) => result.script.aliasId === undefined)
                         .map((result) => (
-                        <Button
-                          key={`${result.mapId}-${getScriptKey(result.script)}`}
-                          variant="ghost"
-                          className={cn(
-                            "w-full justify-start h-7 text-xs px-2",
-                            isScriptModified(result.script) && "text-yellow-400"
-                          )}
-                          onClick={() => handleSearchResultClick(result)}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span>{getScriptLabel(result.script)}</span>
-                            <div className="flex items-center gap-1">
-                              {result.script.aliasId !== undefined && (
-                                <span className="text-[10px] font-thin text-muted-foreground">
-                                  (&rArr; system {result.script.aliasId})
-                                </span>
-                              )}
+                          <Button
+                            key={`${result.mapId}-${getScriptKey(result.script)}`}
+                            variant="ghost"
+                            className={cn(
+                              "w-full justify-start h-7 text-xs px-2",
+                              isScriptModified(result.script) && "text-yellow-400"
+                            )}
+                            onClick={() => handleSearchResultClick(result)}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span>{getScriptLabel(result.script)}</span>
+                              <div className="flex items-center gap-1">
+                                {result.script.aliasId !== undefined && (
+                                  <span className="text-[10px] font-thin text-muted-foreground">
+                                    (&rArr; system {result.script.aliasId})
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </Button>
-                      ))}
+                          </Button>
+                        ))}
                     </div>
                   </div>
                 ))}
@@ -231,17 +269,19 @@ export function ScriptList({ className }: ScriptListProps) {
             <div className="text-xs font-medium text-muted-foreground">
               Available Scripts ({filteredScripts.length})
             </div>
-            {canAddScripts && (
-              <div className="flex gap-1">
-                {scriptType === FunctionType.Mesh && (
-                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setIsMapPickerOpen(true)}>
-                    <Map className="h-3 w-3" />
-                  </Button>
-                )}
-                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setIsAddModalOpen(true)}>
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
+            {scriptType === FunctionType.Mesh && (
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-5 w-6" onClick={() => setIsMapPickerOpen(true)}>
+                      <Map className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="text-xs">
+                    <p>Find script on the map</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
           <div className="space-y-1">
@@ -252,10 +292,7 @@ export function ScriptList({ className }: ScriptListProps) {
                 <Button
                   key={getScriptKey(script)}
                   variant={isScriptSelected(script) ? "secondary" : "ghost"}
-                  className={cn(
-                    "w-full justify-start h-7 text-xs px-2",
-                    isScriptModified(script) && "text-yellow-400"
-                  )}
+                  className={cn("w-full justify-start h-7 text-xs px-2", isScriptModified(script) && "text-yellow-400")}
                   ref={isScriptSelected(script) ? selectedItemRef : undefined}
                   onClick={() => selectScript(script)}
                 >
@@ -279,13 +316,6 @@ export function ScriptList({ className }: ScriptListProps) {
         </>
       )}
 
-      <AddScriptModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        scriptType={scriptType}
-        onAddScript={handleAddScript}
-      />
-
       <Dialog
         open={isMapPickerOpen}
         onOpenChange={(o) => {
@@ -298,20 +328,23 @@ export function ScriptList({ className }: ScriptListProps) {
           </DialogHeader>
           <div className="h-[560px] w-[900px]">
             <MapPicker
-              onPickCell={(mx, mz) => {
-                // Find the first mesh script that matches the selected coordinates
-                const matchingScript = filteredScripts.find(
-                  (script) => script.type === FunctionType.Mesh && script.x === mz && script.y === mx
-                )
-                if (matchingScript) {
-                  selectScript(matchingScript)
-                }
-                setIsMapPickerOpen(false)
-              }}
+              onPickCell={handlePickCell}
             />
           </div>
         </DialogContent>
       </Dialog>
+
+      <AddScriptModal
+        isOpen={isAddModalOpen}
+        onClose={() => {
+          setIsAddModalOpen(false)
+          setNewMeshCoords(null)
+        }}
+        scriptType={FunctionType.Mesh}
+        onAddScript={handleAddScript}
+        initialRow={newMeshCoords?.y}
+        initialColumn={newMeshCoords?.x}
+      />
     </div>
   )
 }

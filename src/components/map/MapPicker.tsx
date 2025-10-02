@@ -48,9 +48,10 @@ export function MapPicker({ onPickCell, mapType: preferredMapType, preselect }: 
   }
 
   function SelectionWatcher({ onPick }: { onPick: (x: number, z: number) => void }) {
-    const { selectedCell } = useGridSelection()
+    const { selectedCell, resetSelection } = useGridSelection()
     useEffect(() => {
       if (selectedCell) onPick(selectedCell.column, selectedCell.row)
+      return () => resetSelection()
     }, [selectedCell, onPick])
     return null
   }

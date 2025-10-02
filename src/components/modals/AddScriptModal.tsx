@@ -1,15 +1,18 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Modal } from "@/components/Modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { FunctionType } from "@/ff7/evfile"
 import { modelsMapping, modelScriptNames } from "@/ff7/worldscript/constants"
+import { useScriptsState } from "@/hooks/useScriptState"
 
 interface AddScriptModalProps {
   isOpen: boolean
   onClose: () => void
   scriptType: FunctionType
-  onAddScript: (params: ModelScriptParams | MeshScriptParams) => void
+  onAddScript: (params: ModelScriptParams | MeshScriptParams | SystemScriptParams) => void
+  initialRow?: number
+  initialColumn?: number
 }
 
 interface ModelScriptParams {
@@ -25,11 +28,68 @@ interface MeshScriptParams {
   functionId: number
 }
 
-export function AddScriptModal({ isOpen, onClose, scriptType, onAddScript }: AddScriptModalProps) {
+interface SystemScriptParams {
+  type: "system"
+  functionId: number
+}
+
+export function AddScriptModal({ isOpen, onClose, scriptType, onAddScript, initialRow, initialColumn }: AddScriptModalProps) {
+  const { functions } = useScriptsState()
   const [modelId, setModelId] = useState<string>("")
   const [functionId, setFunctionId] = useState<string>("")
   const [row, setRow] = useState<string>("")
   const [column, setColumn] = useState<string>("")
+
+  // Filter functions based on existing ones
+  const getAvailableSystemFunctions = () => {
+    const existingSystemFunctions = functions
+      .filter(f => f.type === FunctionType.System)
+      .map(f => f.id)
+    return Array.from({ length: 64 }, (_, i) => i)
+      .filter(id => !existingSystemFunctions.includes(id))
+  }
+
+  const getAvailableModelFunctions = (selectedModelId: number) => {
+    const existingModelFunctions = functions
+      .filter(f => f.type === FunctionType.Model && (f as any).modelId === selectedModelId)
+      .map(f => f.id)
+    return Array.from({ length: 256 }, (_, i) => i)
+      .filter(id => !existingModelFunctions.includes(id))
+  }
+
+  const getAvailableMeshFunctions = (selectedRow: number, selectedColumn: number) => {
+    const existingMeshFunctions = functions
+      .filter(f => f.type === FunctionType.Mesh && (f as any).x === selectedRow && (f as any).y === selectedColumn)
+      .map(f => f.id)
+    return Array.from({ length: 16 }, (_, i) => i)
+      .filter(id => !existingMeshFunctions.includes(id))
+  }
+
+  // Clear functionId when model changes for model scripts
+  useEffect(() => {
+    if (scriptType === FunctionType.Model) {
+      setFunctionId("")
+    }
+  }, [modelId, scriptType])
+
+  // Clear functionId when row or column changes for mesh scripts
+  useEffect(() => {
+    if (scriptType === FunctionType.Mesh) {
+      setFunctionId("")
+    }
+  }, [row, column, scriptType])
+
+  // Set initial values when modal opens
+  useEffect(() => {
+    if (isOpen && scriptType === FunctionType.Mesh) {
+      if (initialRow !== undefined) {
+        setRow(initialRow.toString())
+      }
+      if (initialColumn !== undefined) {
+        setColumn(initialColumn.toString())
+      }
+    }
+  }, [isOpen, scriptType, initialRow, initialColumn])
 
   const handleSubmit = () => {
     if (scriptType === FunctionType.Model) {
@@ -47,6 +107,12 @@ export function AddScriptModal({ isOpen, onClose, scriptType, onAddScript }: Add
         y: parseInt(column),
         functionId: parseInt(functionId),
       })
+    } else if (scriptType === FunctionType.System) {
+      if (!functionId) return
+      onAddScript({
+        type: "system",
+        functionId: parseInt(functionId),
+      })
     }
 
     // Reset form
@@ -62,6 +128,8 @@ export function AddScriptModal({ isOpen, onClose, scriptType, onAddScript }: Add
       return modelId && functionId
     } else if (scriptType === FunctionType.Mesh) {
       return row && column && functionId
+    } else if (scriptType === FunctionType.System) {
+      return functionId
     }
     return false
   }
@@ -71,6 +139,8 @@ export function AddScriptModal({ isOpen, onClose, scriptType, onAddScript }: Add
       return "Add New Model Script"
     } else if (scriptType === FunctionType.Mesh) {
       return "Add New Mesh Script"
+    } else if (scriptType === FunctionType.System) {
+      return "Add New System Script"
     }
     return "Add New Script"
   }
@@ -126,17 +196,22 @@ export function AddScriptModal({ isOpen, onClose, scriptType, onAddScript }: Add
                   <SelectValue placeholder="Select a function" />
                 </SelectTrigger>
                 <SelectContent>
-                  {functionOptions.map(({ id, name }) => (
-                    <SelectItem key={id} value={id} className="text-xs">
-                      {name} (ID: {id})
-                    </SelectItem>
-                  ))}
+                  {modelId && getAvailableModelFunctions(parseInt(modelId))
+                    .filter(id => functionOptions.some(opt => parseInt(opt.id) === id))
+                    .map((id) => {
+                      const option = functionOptions.find(opt => parseInt(opt.id) === id)
+                      return (
+                        <SelectItem key={id} value={id.toString()} className="text-xs">
+                          {option?.name} (ID: {id})
+                        </SelectItem>
+                      )
+                    })}
                   {/* Add additional function IDs that might not be in the mapping */}
-                  {Array.from({ length: 256 }, (_, i) => i)
-                    .filter((i) => !functionOptions.some((opt) => parseInt(opt.id) === i))
-                    .map((i) => (
-                      <SelectItem key={i} value={i.toString()} className="text-xs">
-                        Function {i}
+                  {modelId && getAvailableModelFunctions(parseInt(modelId))
+                    .filter((id) => !functionOptions.some((opt) => parseInt(opt.id) === id))
+                    .map((id) => (
+                      <SelectItem key={id} value={id.toString()} className="text-xs">
+                        Function {id}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -192,15 +267,35 @@ export function AddScriptModal({ isOpen, onClose, scriptType, onAddScript }: Add
                   <SelectValue placeholder="Select function ID" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 16 }, (_, i) => (
-                    <SelectItem key={i} value={i.toString()} className="text-xs">
-                      Function {i}
+                  {row && column && getAvailableMeshFunctions(parseInt(row), parseInt(column)).map((id) => (
+                    <SelectItem key={id} value={id.toString()} className="text-xs">
+                      Function {id}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </>
+        )}
+
+        {scriptType === FunctionType.System && (
+          <div className="space-y-2">
+            <Label htmlFor="system-function-select" className="text-xs font-medium">
+              Function
+            </Label>
+            <Select value={functionId} onValueChange={setFunctionId}>
+              <SelectTrigger className="text-xs">
+                <SelectValue placeholder="Select a function" />
+              </SelectTrigger>
+              <SelectContent>
+                {getAvailableSystemFunctions().map((id) => (
+                  <SelectItem key={id} value={id.toString()} className="text-xs">
+                    Function {id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
       </div>
     </Modal>

@@ -408,10 +408,76 @@ export function useScriptsState() {
       setMessage(`Added new mesh script ${x},${y}:${functionId}`)
       markScriptModified(newFunction)
       markUnsavedChanges()
+      
       return newFunction
     } catch (error) {
       console.error("Error adding mesh script:", error)
       setMessage("Failed to add mesh script: " + (error as Error).message, true)
+      throw error
+    }
+  }
+
+  const addSystemScript = async (functionId: number) => {
+    try {
+      if (!state.ev) {
+        throw new Error("No scripts loaded")
+      }
+
+      const newFunction = state.ev.addSystemFunction(functionId)
+
+      // Update the functions list to match the EvFile's functions array
+      setState((prev) => ({
+        ...prev,
+        functions: state.ev!.functions,
+      }))
+
+      // Select the new script
+      selectScript(newFunction)
+
+      setMessage(`Added new system script ${functionId}`)
+      markScriptModified(newFunction)
+      markUnsavedChanges()
+      return newFunction
+    } catch (error) {
+      console.error("Error adding system script:", error)
+      setMessage("Failed to add system script: " + (error as Error).message, true)
+      throw error
+    }
+  }
+
+  const deleteScript = async (script: FF7Function) => {
+    try {
+      if (!state.ev) {
+        throw new Error("No scripts loaded")
+      }
+
+      // Find the index of the script to delete
+      const scriptIndex = state.ev.functions.findIndex(f =>
+        f.type === script.type &&
+        f.id === script.id &&
+        (script.type === FunctionType.Model ? (f as ModelFunction).modelId === (script as ModelFunction).modelId : true) &&
+        (script.type === FunctionType.Mesh ? (f as MeshFunction).x === (script as MeshFunction).x && (f as MeshFunction).y === (script as MeshFunction).y : true)
+      )
+
+      if (scriptIndex === -1) {
+        throw new Error("Script not found")
+      }
+
+      // Delete from EvFile
+      state.ev.deleteFunction(scriptIndex)
+
+      // Update the functions list to match the EvFile's functions array
+      setState((prev) => ({
+        ...prev,
+        functions: state.ev!.functions,
+        selectedScript: null, // Clear selection after deletion
+      }))
+
+      setMessage(`Deleted script`)
+      markUnsavedChanges()
+    } catch (error) {
+      console.error("Error deleting script:", error)
+      setMessage("Failed to delete script: " + (error as Error).message, true)
       throw error
     }
   }
@@ -683,6 +749,8 @@ export function useScriptsState() {
     saveScripts,
     addModelScript,
     addMeshScript,
+    addSystemScript,
+    deleteScript,
     setSelectedMap,
     setScriptType,
     selectScript,

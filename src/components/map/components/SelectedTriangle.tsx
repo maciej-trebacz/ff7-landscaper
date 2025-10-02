@@ -18,6 +18,7 @@ import { useScriptsState } from "@/hooks/useScriptState";
 import { useMaps, MapType, MapId } from "@/hooks/useMaps";
 import { FunctionType } from "@/ff7/evfile";
 import { MESH_SIZE } from "@/components/map/constants";
+import { confirm } from "@tauri-apps/plugin-dialog";
 
 const MAP_ID_BY_TYPE: Record<MapType, MapId> = {
   overworld: "WM0",
@@ -35,7 +36,7 @@ export function SelectedTriangle({ triangle, textures, onVertexChange }: Selecte
   const { messages } = useMessagesState();
   const { updateSingleTriangle, mapType } = useMaps();
   const { setCurrentTab } = useAppState();
-  const { setScriptType, selectScript, functions, setSelectedMap, loadScripts } = useScriptsState();
+  const { setScriptType, selectScript, functions, setSelectedMap, loadScripts, addMeshScript } = useScriptsState();
 
   if (!triangle) {
     return (
@@ -67,12 +68,8 @@ export function SelectedTriangle({ triangle, textures, onVertexChange }: Selecte
     // Set script type to Mesh
     setScriptType(FunctionType.Mesh);
 
-    // Reload scripts for the selected map to ensure list is fresh
-    const loaded = await loadScripts(targetMapId);
-    const list = loaded ?? functions;
-
     // Find the mesh script with matching coordinates and ID
-    const targetScript = list.find(script =>
+    let targetScript = functions.find(script =>
       script.type === FunctionType.Mesh &&
       script.x === row &&
       script.y === col &&
@@ -81,7 +78,15 @@ export function SelectedTriangle({ triangle, textures, onVertexChange }: Selecte
 
     if (targetScript) {
       selectScript(targetScript);
+      return;
     }
+
+    // Not found – ask to create
+    const confirmed = await confirm("There are no scripts for selected mesh. Do you want to create one?", {
+      title: "Create New Mesh Script",
+    });
+    if (!confirmed) return;
+    await addMeshScript(row, col, scriptId);
   };
 
   return (
@@ -92,62 +97,77 @@ export function SelectedTriangle({ triangle, textures, onVertexChange }: Selecte
           <div className="rounded-md border bg-muted/50 p-2 space-y-1">
             <div className="flex items-center justify-between space-x-2">
               <Label className="text-xs w-16 shrink-0">Type</Label>
-              <Select
-                value={triangle.type.toString()}
-                onValueChange={(value) => handlePropertyChange({ type: parseInt(value) })}
-              >
-                <SelectTrigger className="h-6 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(TRIANGLE_TYPES).map(([id, data]) => (
-                    <SelectItem key={id} value={id}>
-                      {data.type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex-1">
+                <Select
+                  value={triangle.type.toString()}
+                  onValueChange={(value) => handlePropertyChange({ type: parseInt(value) })}
+                >
+                  <SelectTrigger className="h-6 text-xs w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(TRIANGLE_TYPES).map(([id, data]) => (
+                      <SelectItem key={id} value={id}>
+                        {data.type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="flex items-center justify-between space-x-2">
               <Label className="text-xs w-16 shrink-0">Script ID</Label>
-              <div className="flex items-center space-x-1">
-                <Input
-                  type="number"
-                  className="h-6 text-xs"
-                  min={0}
-                  max={255}
-                  value={triangle.script}
-                  onChange={(e) => handlePropertyChange({ script: parseInt(e.target.value) })}
-                />
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="h-6 px-2 text-xs"
-                  onClick={handleJumpToScript}
+              <div className="flex items-center gap-1 flex-1">
+                <Select
+                  value={triangle.script.toString()}
+                  onValueChange={(value) => handlePropertyChange({ script: parseInt(value) })}
                 >
-                  Jump to script
-                </Button>
+                  <SelectTrigger className="h-6 text-xs w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">0 (no script)</SelectItem>
+                    <SelectItem value="1">1 (no battles)</SelectItem>
+                    <SelectItem value="3">3 (function 0)</SelectItem>
+                    <SelectItem value="4">4 (function 1)</SelectItem>
+                    <SelectItem value="5">5 (function 2)</SelectItem>
+                    <SelectItem value="6">6 (function 3)</SelectItem>
+                    <SelectItem value="7">7 (function 4)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {triangle.script >= 3 && triangle.script <= 7 && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-6 px-2 text-xs"
+                    onClick={handleJumpToScript}
+                  >
+                    Jump to
+                  </Button>
+                )}
               </div>
             </div>
 
             <div className="flex items-center justify-between space-x-2">
               <Label className="text-xs w-16 shrink-0">Region</Label>
-              <Select
-                value={triangle.locationId.toString()}
-                onValueChange={(value) => handlePropertyChange({ locationId: parseInt(value) })}
-              >
-                <SelectTrigger className="h-6 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {messages.slice(0, 20).map((message, index) => (
-                    <SelectItem key={index} value={index.toString()}>
-                      {message}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex-1">
+                <Select
+                  value={triangle.locationId.toString()}
+                  onValueChange={(value) => handlePropertyChange({ locationId: parseInt(value) })}
+                >
+                  <SelectTrigger className="h-6 text-xs w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {messages.slice(0, 20).map((message, index) => (
+                      <SelectItem key={index} value={index.toString()}>
+                        {message}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="flex items-center space-x-2">

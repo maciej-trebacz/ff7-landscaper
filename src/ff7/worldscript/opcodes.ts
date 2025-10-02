@@ -28,7 +28,6 @@ export enum Namespace {
   Memory = "Memory",
   Window = "Window",
   Player = "Player",
-  Battle = "Battle",
   Savemap = "Savemap",
   Special = "Special",
   Temp = "Temp",
