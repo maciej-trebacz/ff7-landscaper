@@ -1,11 +1,11 @@
 {
-  "version": "1.0.2",
-  "pub_date": "2025-09-29T17:00:00+02:00",
-  "notes": "Fixed saving changes to alternative sections & performance improvements",
+  "version": "1.1.0",
+  "pub_date": "2025-10-05T17:00:00+02:00",
+  "notes": "Added a contextual Help system, Map editor improvements",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRWktFU284d290TjNmbmhSeHVoMWt6THQ5SXoyaXhsVG9TZURadkNOTXI2Tk10NjJhQmhsTCtuM2xOU2FaUlQ3STdWWUdpSHhFUzB5eEdVRmFhV3haTWRUU3ZaOWtGZFFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzU5MTUwMjQ1CWZpbGU6RkY3IExhbmRzY2FwZXJfMS4wLjJfeDY0LXNldHVwLmV4ZQpad0RHTHlxQjdmZTE4TmgvUHZ0VGVYYXVEOXZsS3dFaFBLdnM4Zzc4cmhxU2hLakdNdGFNN1dCdm01TmFyNmhYQnY3RUpyanlhMUhkKzR3bk9DbnREUT09Cg==",
-      "url": "https://github.com/maciej-trebacz/ff7-landscaper/releases/download/1.0.2/FF7.Landscaper_1.0.2_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRWktFU284d290TjFabEViSk5GTWxiMFJ3TmpSLzdwWlRlMk1ONEVVa05KbFpuZStiR2J5TWJLWkVCcy9oTFVuVTNGTjNsZzVVZVhjL2c0aGR1c2RlOXNaNXRTSEJPT0FNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzU5Njg2MDI4CWZpbGU6RkY3IExhbmRzY2FwZXJfMS4xLjBfeDY0LXNldHVwLmV4ZQpVeThQL2U0ZVgwNjcvRU5CYmZQMjUrL3hLb3RES2dnekkvYUF6ai9MK2o5TE83cHNmNDNCbXZXeFl0SFpSOHBjTmhoMWtrbzhCSkFhcXp3bnNqTVdDQT09Cg==",
+      "url": "https://github.com/maciej-trebacz/ff7-landscaper/releases/download/1.1.0/FF7.Landscaper_1.1.0_x64-setup.exe"
     }
   }
 }

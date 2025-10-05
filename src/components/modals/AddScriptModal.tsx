@@ -75,9 +75,14 @@ export function AddScriptModal({ isOpen, onClose, scriptType, onAddScript, initi
   // Clear functionId when row or column changes for mesh scripts
   useEffect(() => {
     if (scriptType === FunctionType.Mesh) {
-      setFunctionId("")
+      // Don't clear if this is the initial load with preselected coordinates
+      const isInitialLoad = initialRow !== undefined && initialColumn !== undefined && 
+                           row === initialRow.toString() && column === initialColumn.toString()
+      if (!isInitialLoad) {
+        setFunctionId("")
+      }
     }
-  }, [row, column, scriptType])
+  }, [row, column, scriptType, initialRow, initialColumn])
 
   // Set initial values when modal opens
   useEffect(() => {
@@ -87,6 +92,13 @@ export function AddScriptModal({ isOpen, onClose, scriptType, onAddScript, initi
       }
       if (initialColumn !== undefined) {
         setColumn(initialColumn.toString())
+      }
+      // Preselect function 0 when opened with preselected coordinates
+      if (initialRow !== undefined && initialColumn !== undefined) {
+        const availableFunctions = getAvailableMeshFunctions(initialRow, initialColumn)
+        if (availableFunctions.includes(0)) {
+          setFunctionId("0")
+        }
       }
     }
   }, [isOpen, scriptType, initialRow, initialColumn])

@@ -77,7 +77,7 @@ export function useMessagesState() {
       clearUnsavedChanges()
     } catch (error) {
       console.error("[Messages] Failed to save messages:", error)
-      setMessage("Failed to save messages: " + (error as Error).message, true)
+      throw error
     }
   }
 

@@ -1,10 +1,6 @@
 import { useMemo, useState } from "react"
 import {
   HelpCallout,
-  HelpDefinitionList,
-  HelpMediaCard,
-  HelpParagraph,
-  Keycap,
 } from "./components"
 import type { HelpTabDefinition } from "./types"
 import {
@@ -15,10 +11,6 @@ import {
   Swords,
   FileCode,
 } from "lucide-react"
-import mapSelectionIllustration from "@/assets/help/map-selection.svg"
-import mapPaintingIllustration from "@/assets/help/map-painting.svg"
-import mapExportIllustration from "@/assets/help/map-export.svg"
-import mapWireframeIllustration from "@/assets/help/map-wireframe.svg"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -31,7 +23,6 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Button } from "@/components/ui/button"
 import { Namespace, Opcodes } from "@/ff7/worldscript/opcodes"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const namespaceOrder: Namespace[] = [
   Namespace.System,
@@ -67,79 +58,7 @@ function formatHex(value: number) {
   return `0x${value.toString(16).toUpperCase().padStart(3, "0")}`
 }
 
-function MapModeGallery() {
-  const cards = [
-    {
-      image: mapSelectionIllustration,
-      label: "Selection mode",
-      description: "Select a triangle to inspect UVs, vertices, and connected textures. The sidebar updates live as you drag vertices.",
-    },
-    {
-      image: mapPaintingIllustration,
-      label: "Painting mode",
-      description: "Brush terrain data onto the mesh. Pick a palette in the Painting sidebar to recolor or restore geography.",
-    },
-    {
-      image: mapExportIllustration,
-      label: "Export mode",
-      description: "Switch to the orthographic workspace for clean captures. Export individual meshes or import edited geometry blocks.",
-    },
-    {
-      image: mapWireframeIllustration,
-      label: "Visualization toggles",
-      description: "Wireframe, grid, normals, and textured overlays help you audit topology before committing edits.",
-    },
-  ]
 
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {cards.map((card) => (
-        <HelpMediaCard key={card.label} {...card} />
-      ))}
-    </div>
-  )
-}
-
-function MapNavigationShortcuts() {
-  return (
-    <HelpDefinitionList
-      items={[
-        {
-          label: "Rotate view",
-          detail: (
-            <span>
-              Use <Keycap>Right click</Keycap> + drag to orbit, or the rotate buttons for 45-degree snaps.
-            </span>
-          ),
-        },
-        {
-          label: "Pan",
-          detail: (
-            <span>
-              Hold <Keycap>Shift</Keycap> while dragging or press the middle mouse button.
-            </span>
-          ),
-        },
-        {
-          label: "Zoom",
-          detail: (
-            <span>
-              Scroll to zoom in perspective mode. Export mode switches to an orthographic camera; use the slider to change scale.
-            </span>
-          ),
-        },
-        {
-          label: "Reset camera",
-          detail: (
-            <span>
-              Click the <Keycap>Home</Keycap> button in the toolbar to recenter on the active map.
-            </span>
-          ),
-        },
-      ]}
-    />
-  )
-}
 
 function OpcodesByNamespace() {
   const [query, setQuery] = useState("")
@@ -294,6 +213,68 @@ function OpcodesByNamespace() {
   )
 }
 
+function MapWorkspaceOverview() {
+  return (
+    <div className="border border-zinc-700 rounded-lg bg-zinc-900/50 p-4 max-[700px]:p-2">
+      {/* App window representation */}
+      <div className="bg-zinc-800 rounded border border-zinc-600 overflow-hidden">
+        {/* Controls bar */}
+        <div className="bg-zinc-700 px-3 py-2 border-b border-zinc-600 max-[700px]:px-2 max-[700px]:py-1">
+          <div className="px-3 py-2 space-y-1 text-sm max-[700px]:px-2 max-[700px]:py-1 max-[700px]:text-xs max-[700px]:space-y-0.5">
+            <div className="text-xs uppercase tracking-wide font-semibold opacity-80 text-zinc-300 max-[700px]:text-[10px]">Controls bar</div>
+            <div className="leading-relaxed text-zinc-200 max-[700px]:text-xs">Mode buttons for selection, painting, and export. Map type selector, rendering mode dropdown, display toggles, alternatives popover, and camera controls.</div>
+          </div>
+        </div>
+
+        {/* Main content area */}
+        <div className="flex min-h-[300px] max-[700px]:min-h-[200px]">
+          {/* Map viewport */}
+          <div className="flex-1 bg-zinc-900">
+            <div className="p-3 h-full max-[700px]:p-2">
+              <div className="px-3 py-2 space-y-1 text-sm max-[700px]:px-2 max-[700px]:py-1 max-[700px]:text-xs max-[700px]:space-y-0.5">
+                <div className="text-xs uppercase tracking-wide font-semibold opacity-80 text-zinc-300 max-[700px]:text-[10px]">Map viewport</div>
+                <div className="leading-relaxed text-zinc-200 max-[700px]:text-xs">Interactive 3D world map with orbit controls. Click triangles to inspect data, paint terrain, or export sections.</div>
+                <div className="leading-relaxed text-zinc-200 max-[700px]:text-xs">
+                  <ul className="space-y-1 mt-2">
+                    <li className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-zinc-800 text-zinc-200 border border-zinc-600">Left mouse button</span>
+                      <span className="text-zinc-400">→</span>
+                      <span>Orbit around</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-zinc-800 text-zinc-200 border border-zinc-600">Right mouse button</span>
+                      <span className="text-zinc-400">→</span>
+                      <span>Pan around</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-zinc-800 text-zinc-200 border border-zinc-600">Scroll wheel</span>
+                      <span className="text-zinc-400">or</span>
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-zinc-800 text-zinc-200 border border-zinc-600">Middle mouse button</span>
+                      <span className="text-zinc-400">→</span>
+                      <span>Zoom in/out</span>
+                    </li>
+                  </ul>
+                  <p className="mt-2 text-zinc-200 max-[700px]:text-xs">Click the <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-zinc-800 text-zinc-200 border border-zinc-600">Home</span> button to reset the view to the initial camera view.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Context sidebar */}
+          <div className="w-[240px] border-l border-zinc-600 bg-zinc-850 flex-shrink-0 max-[700px]:w-[140px]">
+            <div className="p-3 max-[700px]:p-2">
+              <div className="px-3 py-2 space-y-1 text-sm max-[700px]:px-2 max-[700px]:py-1 max-[700px]:text-xs max-[700px]:space-y-0.5">
+                <div className="text-xs uppercase tracking-wide font-semibold opacity-80 text-zinc-300 max-[700px]:text-[10px]">Context sidebar</div>
+                <div className="leading-relaxed text-zinc-200 max-[700px]:text-xs">Mode-specific tools and data. Shows triangle info, paint palettes, or export options depending on the active mode.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ScriptWorkspaceOverview() {
   return (
     <div className="border border-zinc-700 rounded-lg bg-zinc-900/50 p-4 max-[700px]:p-2">
@@ -354,34 +335,6 @@ function MessagesTips() {
   )
 }
 
-function EncountersViewTabs() {
-  return (
-    <Tabs defaultValue="regions" className="space-y-3">
-      <TabsList className="w-fit">
-        <TabsTrigger value="regions">Regions</TabsTrigger>
-        <TabsTrigger value="yuffie">Yuffie</TabsTrigger>
-        <TabsTrigger value="chocobo">Chocobos</TabsTrigger>
-      </TabsList>
-      <TabsContent value="regions" className="space-y-2">
-        <HelpParagraph>
-          Pick one of the 16 regional encounter tables from the left-hand list. Each region exposes multiple encounter sets
-          and sliders for probability, battle formations, and formation weights.
-        </HelpParagraph>
-      </TabsContent>
-      <TabsContent value="yuffie" className="space-y-2">
-        <HelpParagraph>
-          Tune the Wutai-only encounters that gate Yuffie&apos;s recruitment. Ratings map directly to the in-game encounter wheel.
-        </HelpParagraph>
-      </TabsContent>
-      <TabsContent value="chocobo" className="space-y-2">
-        <HelpParagraph>
-          Adjust capture chances for each region and the minimum/maximum quality brackets the game rolls when spawning a
-          chocobo.
-        </HelpParagraph>
-      </TabsContent>
-    </Tabs>
-  )
-}
 
 export const HELP_TABS: HelpTabDefinition[] = [
   {
@@ -395,13 +348,13 @@ export const HELP_TABS: HelpTabDefinition[] = [
         id: "messages-overview",
         title: "Message catalogue",
         paragraphs: [
-          "The world map message table is loaded directly from the LGP archives. Landscaper lists entries in numeric order so they stay aligned with script references.",
+          "Messages 0 through 19 are region names used for world map area identification. Message IDs 20 through 61 are dialogues and tutorial messages used by the world map.",
           "Core messages (IDs 0-61) are locked in place because they are referenced from multiple parts of the world map code. Extra messages past that range can be removed if you need to slim the table down.",
         ],
         items: [
-          { label: "Editing", detail: "Type directly into the message field. Changes mark the project as having unsaved edits." },
-          { label: "Adding lines", detail: "Use the Add Message button at the bottom to append a blank entry." },
-          { label: "Control codes", detail: "Message text supports the same control codes as the original game. Keep escape sequences on their own to avoid layout glitches." },
+          { label: "Editing", detail: "Type directly into the message field. Changing the message contents will not resize the message box itself - use the \"Jump to Script\" option to adjust the window dimensions in the script section." },
+          { label: "Control codes", detail: "Message text supports the same control codes as the original game." },
+          { label: "Size limit", detail: "The total length of all messages cannot exceed 4KB. The app will warn you if you exceed that limit." },
         ],
       },
       {
@@ -420,53 +373,85 @@ export const HELP_TABS: HelpTabDefinition[] = [
     sections: [
       {
         id: "map-layout",
-        title: "Editor layout",
-        paragraphs: [
-          "The viewport fills most of the screen and reflects the current map type. A context-sensitive sidebar on the right exposes either triangle data, paint tools, or export options depending on the active mode.",
-        ],
-        items: [
-          { label: "Status overlay", detail: "When data is loading the viewport is locked and a progress overlay appears." },
-          { label: "Model overlay", detail: "Toggle world models to preview vehicles and props while editing terrain." },
-          { label: "Section selection", detail: "Clicking a triangle in selection mode updates the sidebar with exact vertex positions and UV assignments." },
-        ],
+        title: "Workspace overview",
+        component: MapWorkspaceOverview,
       },
       {
         id: "map-modes",
-        title: "Modes and toolbars",
-        description: "Switch modes from the toolbar on the top left. Each mode enables a dedicated sidebar.",
-        component: MapModeGallery,
-      },
-      {
-        id: "map-navigation",
-        title: "Camera and navigation",
+        title: "Editor modes",
         paragraphs: [
-          "Landscaper uses orbit controls in selection and painting modes. Export mode locks rotation for consistent captures but still allows zoom and pan.",
+          "The map editor has three distinct modes, each with its own purpose and toolset. Switch between modes using the buttons in the controls bar.",
         ],
-        component: MapNavigationShortcuts,
+        items: [
+          { 
+            label: "Selection mode", 
+            detail: "Click triangles to inspect UVs, vertices, and connected textures. Make changes in the sidebar and they will be reflected in real-time in the map view." 
+          },
+          { 
+            label: "Painting mode", 
+            detail: "Paint over triangles to select multiple triangles, then use the sidebar to bulk apply parameters like Terrain Type, Script ID, Texture, and more." 
+          },
+          { 
+            label: "Export/Import mode", 
+            detail: "Export individual meshes to .obj files, edit them in external tools, and import them back. Use the checkbox to reset normals when importing, which recalculates normals using the geometry itself to match what the game expects." 
+          },
+        ],
       },
       {
-        id: "map-visuals",
-        title: "Visual aids",
+        id: "map-display-modes",
+        title: "Display modes",
         paragraphs: [
-          "Rendering presets help you audit topology. Terrain view emphasizes height data, textured view surfaces the baked textures, and script overlay colors triangles by attached scripts.",
-          "Normals and grid overlays help you debug shading artifacts. When you enable wireframe Landscaper fades edges based on camera height so dense areas stay legible.",
+          "The display mode dropdown changes how the world map is rendered, each emphasizing different aspects of the data.",
+        ],
+        items: [
+          { 
+            label: "Terrain type", 
+            detail: "Shows the color-coded type of terrain for each triangle that influences walkability and other behavior, and also affects random encounters." 
+          },
+          { 
+            label: "Textured", 
+            detail: "Displays the world map with its original textures applied, showing how it appears in-game." 
+          },
+          { 
+            label: "Regions", 
+            detail: "Color-codes triangles by their region assignments, useful for understanding encounter zones and area boundaries." 
+          },
+          { 
+            label: "Scripts", 
+            detail: "Highlights triangles by their associated script IDs, helping visualize which areas are controlled by specific world scripts. Triangles where Chocobo encounters are possible are marked with yellow color." 
+          },
+        ],
+      },
+      {
+        id: "map-display",
+        title: "Display elements",
+        paragraphs: [
+          "You can enable various display aids to help visualize and debug the world map.",
+        ],
+        items: [
+          { 
+            label: "Wireframe", 
+            detail: "Toggle wireframe overlay to see triangle edges and topology structure." 
+          },
+          { 
+            label: "Mesh grid", 
+            detail: "Show mesh boundaries over the whole world map." 
+          },
+          { 
+            label: "Models", 
+            detail: "Enable the display of the position of in-game models. This requires Final Fantasy VII to be open and connected to Landscaper. (This should happen automatically when you open the game.)" 
+          },
+          { 
+            label: "Normals", 
+            detail: "Display surface normal vectors to debug shading and lighting." 
+          },
         ],
       },
       {
         id: "map-alternatives",
         title: "Alternative sections",
         paragraphs: [
-          "The Alternatives popover toggles post-event variants such as the Temple collapse or the Junon canon crater. Landscaper keeps these toggles per session so you can quickly compare states.",
-        ],
-        items: [
-          {
-            label: "Group badges",
-            detail: "The badge on the Alternatives button shows how many variant sets are enabled. Expand the popover to toggle specific section IDs.",
-          },
-          {
-            label: "Texture sync",
-            detail: "When you change alternatives the viewer automatically reloads textures for the active map type to prevent mismatches.",
-          },
+          "The alternatives popover lets you toggle different section groups that depend on the world map progression (for example, the Temple of the Ancients collapse or Junon crater). This only works for the overworld map.",
         ],
       },
     ],
@@ -482,19 +467,10 @@ export const HELP_TABS: HelpTabDefinition[] = [
         id: "textures-overview",
         title: "Texture browser",
         paragraphs: [
-          "Textures load on demand for the selected map type. Use the picker in the header to switch between Overworld, Underwater, and Great Glacier atlases.",
+          "Shows all textures used on the world map. Use the picker in the header to switch between Overworld, Underwater, and Great Glacier atlases.",
         ],
         items: [
-          { label: "Preview scale", detail: "Previews double the original pixel dimensions and force nearest-neighbour scaling so you can inspect seams." },
           { label: "Metadata", detail: "Each card lists the internal texture id, UV offset, and native resolution." },
-          { label: "Streaming", detail: "Landscaper caches previously loaded atlases. Switching back to a map type is instant after the first load." },
-        ],
-      },
-      {
-        id: "textures-usage",
-        title: "Integrating with the map editor",
-        paragraphs: [
-          "Use the UV offsets when lining up textures during triangle editing. Painting mode references the same atlas so changes in the texture tab are immediately reflected in the map viewer.",
         ],
       },
     ],
@@ -508,21 +484,12 @@ export const HELP_TABS: HelpTabDefinition[] = [
     sections: [
       {
         id: "locations-grid",
-        title: "Spawn grid",
+        title: "Field Destinations",
         paragraphs: [
-          "Each row represents one entry in the world map entrance table. Default coordinates populate the left half of the grid, while the optional alternative target lives on the right.",
+          "Each row represents one entry in the world to field destination mapping. Each entry has a default and an optional alternative target. Alternatives are optional.",
         ],
         items: [
-          { label: "Numeric validation", detail: "Inputs clamp to the valid range for the underlying data structure and accept direct typing." },
-          { label: "Field picker", detail: "Click a field name to open the searchable dropdown of field IDs and labels." },
-          { label: "Direction", detail: "Direction values match the field script expectations (0-255)." },
-        ],
-      },
-      {
-        id: "locations-shortcuts",
-        title: "Efficiency tips",
-        paragraphs: [
-          "Keep a second window with the map tab open to verify triangle indices visually. The status bar will reflect unsaved location changes so you know when to commit.",
+          { label: "Script engine interaction", detail: "These are the only valid field targets that you can jump to from the World Map script engine." },
         ],
       },
     ],
@@ -532,23 +499,49 @@ export const HELP_TABS: HelpTabDefinition[] = [
     label: "Encounters",
     icon: Swords,
     summary:
-      "View and edit random encounter tables for each world region and terrain type. Edit Yuffie & Chocobo specific encounter data",
+      "Configure random encounter tables for each world region and terrain type. Edit Yuffie recruitment encounters and Chocobo capture ratings.",
     sections: [
       {
         id: "encounters-overview",
-        title: "Region management",
+        title: "Encounter system overview",
         paragraphs: [
-          "Landscaper mirrors the in-game region layout. Selecting a region updates the detail panel where you can tweak encounter weights, back attacks, and scene ids.",
+          "The world map encounter system uses region-based tables with terrain-specific encounter sets. Each region can have up to four encounter sets mapped to different terrain types like Grass, Forest, Desert, and others.",
+          "Random battles are triggered based on your current region and the terrain type of the triangle you're walking on. The game first checks for special encounters (Yuffie, Chocobo) before selecting from normal random battles.",
         ],
         items: [
-          { label: "Terrain sets", detail: "Use the Edit Region Sets dialog to map world geometry chunks to encounter groups." },
-          { label: "Set navigation", detail: "Switch between the up to four encounter sets a region can host. The preview includes aggregated probabilities for quick sanity checks." },
+          { label: "Region limitation", detail: "Only the first 16 regions have unique encounter data. Regions 16 and beyond use the encounter tables from region 15." },
+          { label: "Terrain mapping", detail: "Use the \"Edit Region Sets\" button to configure which terrain types map to each encounter set for a region. This data is saved in the ff7_en.exe file." },
+          { label: "Encounter types", detail: "Each set includes normal encounters, back attacks, side attacks, pincer attacks, and Chocobo encounters with individual rates." },
         ],
       },
       {
-        id: "encounters-views",
-        title: "Special views",
-        component: EncountersViewTabs,
+        id: "encounters-regions",
+        title: "Region encounter editing",
+        paragraphs: [
+          "Select a region from the sidebar to edit its encounter tables. Each region has four encounter sets that correspond to different terrain types.",
+        ],
+        items: [
+          { label: "Active toggle", detail: "Enable or disable encounters for the selected set." },
+          { label: "Encounter rate", detail: "Controls how frequently random battles occur on this terrain type. Higher values mean more frequent encounters. " },
+          { label: "Battle selection", detail: "Each encounter entry has a battle ID and encounter rate. Use the battle picker to search and select specific battles. The maximum encounter rate is 64, and for normal encounters, all the rates should sum up to 64. Encounter rate set to 0 disables an encounter record." },
+        ],
+      },
+      {
+        id: "encounters-yuffie",
+        title: "Yuffie encounters",
+        paragraphs: [
+          "Yuffie encounters are special battles that occur when walking on Forest or Jungle terrain in specific regions. The battle selected depends on Cloud's current level.",
+        ],
+        items: [
+          { label: "Region chances", detail: "Each region has a specific chance percentage for Yuffie encounters, ranging from 12.5% to 99.6%. This data is hardcoded in the game's exe file." },
+        ],
+      },
+      {
+        id: "encounters-chocobo",
+        title: "Chocobo encounters",
+        paragraphs: [
+          "Chocobo encounters occur when walking on triangles with the \"chocobo tracks\" flag set. The captured Chocobo's rating depends on the specific battle that occurred.",
+        ],
       },
     ],
   },
@@ -563,14 +556,6 @@ export const HELP_TABS: HelpTabDefinition[] = [
         id: "scripts-workspace",
         title: "Workspace overview",
         component: ScriptWorkspaceOverview,
-      },
-      {
-        id: "scripts-navigation",
-        title: "Navigation and search",
-        paragraphs: [
-          "Use the back/forward buttons or their keyboard shortcuts to retrace navigation history across scripts. The search box lets you search for any text string inside the decompiled scripts.",
-          "When you switch maps Landscaper keeps the previous selection so you can compare implementations side by side.",
-        ],
       },
       {
         id: "scripts-opcodes",

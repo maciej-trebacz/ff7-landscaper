@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from "react"
+import type { ComponentType } from "react"
 import type { LucideIcon } from "lucide-react"
 
 export type HelpTabId = "messages" | "map" | "textures" | "locations" | "encounters" | "scripts"

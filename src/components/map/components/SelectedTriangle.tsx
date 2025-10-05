@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TexturePreview } from "@/components/ui/texture-preview";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { useAppState } from "@/hooks/useAppState";
@@ -36,7 +37,7 @@ export function SelectedTriangle({ triangle, textures, onVertexChange }: Selecte
   const { messages } = useMessagesState();
   const { updateSingleTriangle, mapType } = useMaps();
   const { setCurrentTab } = useAppState();
-  const { setScriptType, selectScript, functions, setSelectedMap, loadScripts, addMeshScript } = useScriptsState();
+  const { setScriptType, selectScript, functions, setSelectedMap, addMeshScript } = useScriptsState();
 
   if (!triangle) {
     return (
@@ -284,7 +285,14 @@ export function SelectedTriangle({ triangle, textures, onVertexChange }: Selecte
                 <SelectContent>
                   {textures.map((texture, index) => (
                     <SelectItem key={index} value={index.toString()}>
-                      {texture.name}
+                      <div className="flex items-center gap-2">
+                        <TexturePreview 
+                          src={texture.imageData} 
+                          alt={texture.name} 
+                          size={24}
+                        />
+                        <span>{texture.name}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

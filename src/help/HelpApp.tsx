@@ -110,7 +110,7 @@ export function HelpApp() {
             </header>
 
             <div className="flex-1 overflow-hidden">
-              <div ref={scrollContainerRef} className="h-full overflow-y-auto">
+              <div ref={scrollContainerRef} className="h-full overflow-y-auto help-content">
                 <div className="px-4 pt-3 pb-6 lg:px-4 lg:pt-3 lg:pb-4 space-y-8">
                   {filteredSections.map((section) => {
                       const SectionComponent = section.component
