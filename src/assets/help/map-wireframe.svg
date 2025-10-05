@@ -1,0 +1,25 @@
+<svg width="320" height="180" viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <defs>
+    <linearGradient id="wireframeBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1120" />
+      <stop offset="1" stop-color="#111827" />
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" rx="14" fill="url(#wireframeBg)" />
+  <g opacity="0.85">
+    <path d="M36 128 L116 44 L204 92 L284 36" stroke="#38bdf8" stroke-width="2" />
+    <path d="M36 128 L152 152 L284 36" stroke="#38bdf8" stroke-width="2" />
+    <path d="M116 44 L152 152" stroke="#38bdf8" stroke-width="2" />
+    <path d="M204 92 L152 152" stroke="#38bdf8" stroke-width="2" />
+    <circle cx="116" cy="44" r="4" fill="#f97316" />
+    <circle cx="204" cy="92" r="4" fill="#f97316" />
+    <circle cx="152" cy="152" r="4" fill="#f97316" />
+    <circle cx="36" cy="128" r="4" fill="#f97316" />
+    <circle cx="284" cy="36" r="4" fill="#f97316" />
+  </g>
+  <path d="M36 128 L116 44 L204 92 Z" fill="#0ea5e9" opacity="0.2" />
+  <rect x="28" y="24" width="90" height="24" rx="10" fill="#1f2937" opacity="0.75" />
+  <text x="73" y="42" fill="#e2e8f0" font-family="Segoe UI, sans-serif" font-size="12" text-anchor="middle">Wireframe</text>
+  <rect x="218" y="24" width="76" height="24" rx="10" fill="#1d4ed8" opacity="0.4" />
+  <text x="256" y="42" fill="#bfdbfe" font-family="Segoe UI, sans-serif" font-size="11" text-anchor="middle">Normals on</text>
+</svg>

@@ -3,10 +3,14 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main"
+    "main",
+    "landscaper-help"
   ],
   "permissions": [
     "core:default",
+    "core:event:default",
+    "core:path:default",
+    "core:resources:default",
     "opener:default",
     "fs:default",
     "fs:allow-read-file",
@@ -22,7 +26,18 @@
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-message",
+    "opener:allow-reveal-item-in-dir",
+    "core:window:allow-set-focus",
+    "core:window:allow-show",
     "core:window:allow-close",
-    "core:window:allow-destroy"
+    "core:window:allow-create",
+    "core:window:allow-destroy",
+    "core:webview:allow-create-webview",
+    "core:webview:allow-webview-show",
+    "core:webview:allow-set-webview-focus",
+    "core:webview:allow-set-webview-size",
+    "core:window:allow-set-size",
+    "core:window:allow-set-always-on-top",
+    "core:webview:allow-internal-toggle-devtools"
   ]
 }

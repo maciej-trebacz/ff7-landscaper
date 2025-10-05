@@ -11,6 +11,8 @@ export type OpcodeDefinition = {
   namespace: Namespace
   description: string
   pushesResult?: boolean
+  // Operator symbol for Math namespace opcodes (displayed instead of name)
+  operator?: string
   // Detailed parameter documentation sourced from ffrtt wiki
   stackParamsDef?: Array<{ name: string; description: string; type?: ParamType }>
   codeParamsDef?: Array<{ name: string; description: string }>
@@ -156,6 +158,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.NEG,
     namespace: Namespace.Math,
+    operator: "~",
     description: "Negate value on stack",
     stackParamsDef: [{ name: "A", description: "Value to negate" }],
     notes: "Pushes -A to the stack.",
@@ -167,6 +170,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.NOT,
     namespace: Namespace.Math,
+    operator: "!",
     description: "Logical NOT of value on stack",
     stackParamsDef: [{ name: "A", description: "Value to complement" }],
     notes: "Pushes 1 if A is 0, otherwise 0.",
@@ -212,6 +216,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.MUL,
     namespace: Namespace.Math,
+    operator: "*",
     description: "Multiply two values on stack",
     stackParamsDef: [
       { name: "A", description: "Factor" },
@@ -226,6 +231,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.ADD,
     namespace: Namespace.Math,
+    operator: "+",
     description: "Add two values on stack",
     stackParamsDef: [
       { name: "A", description: "Term" },
@@ -240,6 +246,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.SUB,
     namespace: Namespace.Math,
+    operator: "-",
     description: "Subtract two values on stack",
     stackParamsDef: [
       { name: "A", description: "Term" },
@@ -254,6 +261,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.SHL,
     namespace: Namespace.Math,
+    operator: "<<",
     description: "Shift left",
     stackParamsDef: [
       { name: "A", description: "Value to shift" },
@@ -268,6 +276,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.SHR,
     namespace: Namespace.Math,
+    operator: ">>",
     description: "Shift right",
     stackParamsDef: [
       { name: "A", description: "Value to shift" },
@@ -282,6 +291,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.LT,
     namespace: Namespace.Math,
+    operator: "<",
     description: "Less than comparison",
     stackParamsDef: [
       { name: "A", description: "Value to compare" },
@@ -296,6 +306,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.GT,
     namespace: Namespace.Math,
+    operator: ">",
     description: "Greater than comparison",
     stackParamsDef: [
       { name: "A", description: "Value to compare" },
@@ -310,6 +321,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.LE,
     namespace: Namespace.Math,
+    operator: "<=",
     description: "Less than or equal comparison",
     stackParamsDef: [
       { name: "A", description: "Value to compare" },
@@ -324,6 +336,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.GE,
     namespace: Namespace.Math,
+    operator: ">=",
     description: "Greater than or equal comparison",
     stackParamsDef: [
       { name: "A", description: "Value to compare" },
@@ -338,6 +351,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.EQ,
     namespace: Namespace.Math,
+    operator: "==",
     description: "Equal comparison",
     stackParamsDef: [
       { name: "A", description: "Value to compare" },
@@ -352,6 +366,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.AND,
     namespace: Namespace.Math,
+    operator: "&",
     description: "Bitwise AND",
     stackParamsDef: [
       { name: "A", description: "Bits" },
@@ -366,6 +381,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.OR,
     namespace: Namespace.Math,
+    operator: "|",
     description: "Bitwise OR",
     stackParamsDef: [
       { name: "A", description: "Bits" },
@@ -380,6 +396,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.LAND,
     namespace: Namespace.Math,
+    operator: "&&",
     description: "Logical AND",
     stackParamsDef: [
       { name: "A", description: "Boolean value" },
@@ -394,6 +411,7 @@ export const Opcodes: Record<number, OpcodeDefinition> = {
     pushesResult: true,
     mnemonic: Mnemonic.LOR,
     namespace: Namespace.Math,
+    operator: "||",
     description: "Logical OR",
     stackParamsDef: [
       { name: "A", description: "Boolean value" },

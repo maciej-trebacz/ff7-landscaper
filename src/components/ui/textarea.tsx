@@ -22,6 +22,29 @@ const Textarea = React.forwardRef<
     return () => window.removeEventListener("resize", handleResize)
   }, [handleResize])
 
+  // Trigger resize when textarea becomes visible
+  React.useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Use requestAnimationFrame to ensure the element is fully rendered
+            requestAnimationFrame(() => {
+              handleResize()
+            })
+          }
+        })
+      },
+      { threshold: 0 }
+    )
+
+    observer.observe(textarea)
+    return () => observer.disconnect()
+  }, [handleResize])
+
   return (
     <textarea
       autoCorrect="off"

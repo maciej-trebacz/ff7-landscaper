@@ -1,8 +1,7 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite"
+import react from "@vitejs/plugin-react"
 
-// @ts-expect-error process is a nodejs global
-const host = process.env.TAURI_DEV_HOST;
+const host = process.env.TAURI_DEV_HOST
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
@@ -30,6 +29,14 @@ export default defineConfig(async () => ({
     },
   },
   resolve: {
-    alias: [{ find: '@', replacement: '/src' }],
-  }, 
-}));
+    alias: [{ find: "@", replacement: "/src" }],
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        main: 'index.html',
+        map: 'help.html'
+      }
+    }
+  }
+}))

@@ -1,0 +1,28 @@
+<svg width="320" height="180" viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <defs>
+    <linearGradient id="paintBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f172a" />
+      <stop offset="1" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="palette" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0ea5e9" stop-opacity="0.5" />
+      <stop offset="1" stop-color="#f97316" stop-opacity="0.6" />
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" rx="14" fill="url(#paintBg)" />
+  <g opacity="0.9">
+    <path d="M36 136 L92 72 L176 120 L252 60 L284 136 Z" fill="#1f2937" stroke="#334155" stroke-width="2" />
+    <path d="M92 72 L152 44 L208 84 L176 120 Z" fill="#1e3a8a" opacity="0.55" />
+  </g>
+  <path d="M120 94 L172 74 L204 110 L164 130 Z" fill="#f97316" opacity="0.65" />
+  <path d="M108 126 L156 150 L96 154 Z" fill="#22d3ee" opacity="0.68" />
+  <circle cx="172" cy="74" r="8" fill="#eab308" stroke="#fef08a" stroke-width="3" />
+  <path d="M54 44 h64" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" opacity="0.7" />
+  <path d="M54 60 h92" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" opacity="0.7" />
+  <path d="M54 76 h48" stroke="#22d3ee" stroke-width="4" stroke-linecap="round" opacity="0.7" />
+  <rect x="218" y="28" width="74" height="28" rx="10" fill="#1f2937" opacity="0.85" />
+  <text x="255" y="46" fill="#e2e8f0" font-family="Segoe UI, sans-serif" font-size="12" text-anchor="middle">Palette A</text>
+  <rect x="38" y="24" width="112" height="32" rx="10" fill="#0ea5e9" opacity="0.25" stroke="#0891b2" />
+  <text x="94" y="44" fill="#bae6fd" font-family="Segoe UI, sans-serif" font-size="12" text-anchor="middle">Painting mode</text>
+  <path d="M208 118 C220 110 236 114 244 126" stroke="#f97316" stroke-width="6" stroke-linecap="round" opacity="0.5" />
+</svg>

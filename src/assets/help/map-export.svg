@@ -1,0 +1,26 @@
+<svg width="320" height="180" viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <defs>
+    <linearGradient id="exportBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#082f49" />
+      <stop offset="1" stop-color="#020617" />
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" rx="14" fill="url(#exportBg)" />
+  <g stroke="#0ea5e9" stroke-opacity="0.4" stroke-width="1">
+    <path d="M30 60 H290" />
+    <path d="M30 100 H290" />
+    <path d="M30 140 H290" />
+    <path d="M80 30 V150" />
+    <path d="M140 30 V150" />
+    <path d="M200 30 V150" />
+    <path d="M260 30 V150" />
+  </g>
+  <rect x="72" y="68" width="176" height="72" fill="#1e1b4b" opacity="0.35" stroke="#38bdf8" stroke-width="2" />
+  <path d="M72 116 L128 72 L216 88 L248 140 Z" fill="#bae6fd" opacity="0.15" />
+  <rect x="36" y="24" width="112" height="24" rx="10" fill="#1d4ed8" opacity="0.4" />
+  <text x="92" y="41" fill="#bfdbfe" font-family="Segoe UI, sans-serif" font-size="12" text-anchor="middle">Export workspace</text>
+  <rect x="182" y="24" width="106" height="24" rx="10" fill="#0f172a" opacity="0.7" />
+  <text x="235" y="41" fill="#e2e8f0" font-family="Segoe UI, sans-serif" font-size="11" text-anchor="middle">Orthographic camera</text>
+  <rect x="108" y="146" width="104" height="18" rx="9" fill="#0ea5e9" opacity="0.5" />
+  <text x="160" y="159" fill="#e0f2fe" font-family="Segoe UI, sans-serif" font-size="11" text-anchor="middle">Mesh 12 selected</text>
+</svg>

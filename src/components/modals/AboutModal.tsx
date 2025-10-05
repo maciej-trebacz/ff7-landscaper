@@ -19,6 +19,7 @@ export function AboutModal({ isOpen, setIsOpen }: AboutModalProps) {
         <p>&copy; 2024-2025 Maciej Trebacz (mav)</p>
         <p><a target="_blank" className="text-slate-400 hover:text-slate-200" href="https://github.com/maciej-trebacz/ff7-terraform">Source code on GitHub</a></p>
         <p><a target="_blank" className="text-slate-400 hover:text-slate-200" href="https://twitch.tv/m4v3k">Watch me code this app live on Twitch</a></p>
+        <p><a target="_blank" className="text-slate-400 hover:text-slate-200" href="https://discord.gg/YyecaMa7Wf">Join our Discord community</a></p>
         <br />
         <p><b>Acknowledgments:</b></p>
         <p>codemann8 - worldmap data research</p>
