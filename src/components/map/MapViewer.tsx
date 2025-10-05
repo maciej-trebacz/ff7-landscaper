@@ -170,7 +170,7 @@ function MapViewer({
     
     if (newCamera && controlsRef.current && cameraStateRef.current) {
       newCamera.position.copy(cameraStateRef.current.position);
-      newCamera.up.set(0, 0, -1);
+      newCamera.up.set(0, 1, 0);
       newCamera.lookAt(cameraStateRef.current.target);
       
       if (newCamera instanceof ThreeOrthographicCamera) {
@@ -181,7 +181,7 @@ function MapViewer({
         const targetDistance = CAMERA_HEIGHT[mapType] / cameraStateRef.current.zoom;
         const direction = new Vector3().subVectors(newCamera.position, cameraStateRef.current.target).normalize();
         newCamera.position.copy(cameraStateRef.current.target).add(direction.multiplyScalar(targetDistance));
-        newCamera.up.set(0, 0, -1);
+        newCamera.up.set(0, 1, 0);
         newCamera.lookAt(cameraStateRef.current.target);
       }
       
@@ -212,7 +212,7 @@ function MapViewer({
     setRotation(0);
     // Reset camera position and orientation
     camera.position.set(mapDimensions.center.x, CAMERA_HEIGHT[mapType], mapDimensions.center.z);
-    camera.up.set(0, 0, -1);
+    camera.up.set(0, 1, 0);
     camera.lookAt(mapDimensions.center.x, 0, mapDimensions.center.z);
     if (cameraType === 'orthographic' && camera instanceof ThreeOrthographicCamera) {
       const margin = 50;
@@ -244,6 +244,23 @@ function MapViewer({
     resetCameraAndControls();
   };
 
+  // Initial camera setup to ensure correct orientation from the start
+  useEffect(() => {
+    if (mapDimensions.width && camera) {
+      // Set initial camera orientation immediately
+      camera.position.set(mapDimensions.center.x, CAMERA_HEIGHT[mapType], mapDimensions.center.z);
+      camera.up.set(0, 1, 0);
+      camera.lookAt(mapDimensions.center.x, 0, mapDimensions.center.z);
+      camera.updateProjectionMatrix();
+      
+      // Set initial controls target
+      if (controlsRef.current) {
+        controlsRef.current.target.set(mapDimensions.center.x, 0, mapDimensions.center.z);
+        controlsRef.current.update();
+      }
+    }
+  }, [mapDimensions, mapType, camera]);
+
   // Reset view only when mapType changes or new map is loaded (mapId changes)
   // Don't reset when alternatives are toggled as they don't change map dimensions
   useEffect(() => {
@@ -267,7 +284,7 @@ function MapViewer({
 
           // Reposition camera directly above target and reset roll/pitch/yaw
           orthoCam.position.set(target.x, orthoCam.position.y, target.z);
-          orthoCam.up.set(0, 0, -1);
+          orthoCam.up.set(0, 1, 0);
           orthoCam.lookAt(target);
           orthoCam.zoom = preservedZoom;
           orthoCam.updateProjectionMatrix();
@@ -353,7 +370,7 @@ function MapViewer({
               {...perspectiveConfig}
               ref={perspectiveCameraRef}
               onUpdate={(self) => {
-                self.up.set(0, 0, -1);
+                self.up.set(0, 1, 0);
                 self.lookAt(mapDimensions.center.x, 0, mapDimensions.center.z);
                 currentCameraRef.current = self;
               }}
@@ -365,7 +382,7 @@ function MapViewer({
                 {...orthoBase}
                 ref={orthographicCameraRef}
                 onUpdate={(self) => {
-                  self.up.set(0, 0, -1);
+                  self.up.set(0, 1, 0);
                   self.lookAt(mapDimensions.center.x, 0, mapDimensions.center.z);
                   currentCameraRef.current = self;
                 }}
@@ -387,6 +404,8 @@ function MapViewer({
             enableDamping={false}
             makeDefault
             enableRotate={!['export', 'painting'].includes(mode)}
+            minPolarAngle={0}
+            maxPolarAngle={Math.PI / 2}
             onChange={() => {
               if (camera) {
                 if (cameraType === 'orthographic' && camera instanceof ThreeOrthographicCamera) {
