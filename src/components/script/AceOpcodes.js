@@ -63,7 +63,7 @@
           "SET_POINT_MESH",
           "SET_POINT_LOCAL",
           "SET_TERRAIN_COLOR",
-          "SET_LIGHT_DROPOFF",
+          "SET_RADIUS",
           "SET_SKY_TOP",
           "SET_SKY_BOTTOM",
           "BATTLE",

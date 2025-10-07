@@ -14,6 +14,7 @@ import { SetCoordsInMeshUI } from "@/components/script/ui/SetCoordsInMeshUI"
 import { CallFunctionUI } from "@/components/script/ui/CallFunctionUI"
 import { DirectionRadialUI } from "@/components/script/ui/DirectionRadialUI"
 import { TriggerBattleUI } from "@/components/script/ui/TriggerBattleUI"
+import { PointSetRadiusUI } from "@/components/script/ui/PointSetRadiusUI"
 
 type Renderer = (ctx: CallContext, onBatch: (updates: Array<{ index: number; newText: string }>) => void) => JSX.Element
 
@@ -61,6 +62,7 @@ const registry: Record<string, Renderer> = {
   "System.call_function": (ctx, onBatch) => <CallFunctionUI ctx={ctx} onBatch={onBatch} />,
   "System.set_field_entry_by_id": (ctx, onBatch) => <SetFieldEntryByIdUI ctx={ctx} onBatch={onBatch} />,
   "System.trigger_battle": (ctx, onBatch) => <TriggerBattleUI ctx={ctx} onBatch={onBatch} />,
+  "Point.set_radius": (ctx, onBatch) => <PointSetRadiusUI ctx={ctx} onBatch={onBatch} />,
 }
 
 export function getCustomRenderer(key: string): Renderer | null {
