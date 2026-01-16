@@ -12,8 +12,9 @@ import { MapControls } from './components/MapControls';
 import { WorldMesh } from './components/WorldMesh';
 import { useMaps, MapType, MapMode, dimensions, MESHES_IN_ROW, MESHES_IN_COLUMN } from '@/hooks/useMaps';
 import ModelOverlay from './ModelOverlay';
+import { LassoOverlay, isPointInPolygon, LassoPoint } from './components/LassoOverlay';
 
-interface MapViewerProps { 
+interface MapViewerProps {
   renderingMode?: RenderingMode,
   onTriangleSelect?: (triangle: Triangle | null) => void,
   isLoading?: boolean,
@@ -31,9 +32,9 @@ interface MapViewerProps {
   onAlternativesChange: (ids: number[]) => void,
 }
 
-function MapViewer({ 
-  renderingMode = "terrain", 
-  onTriangleSelect, 
+function MapViewer({
+  renderingMode = "terrain",
+  onTriangleSelect,
   isLoading: externalIsLoading,
   showGrid = false,
   cameraType = "perspective",
@@ -57,10 +58,11 @@ function MapViewer({
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const perspectiveCameraRef = useRef<ThreePerspectiveCamera>(null);
   const orthographicCameraRef = useRef<ThreeOrthographicCamera>(null);
-  const { worldmap, mapType, mapId, mode, setSelectedTriangle } = useMaps();
+  const { worldmap, mapType, mapId, mode, setSelectedTriangle, triangleMap, addMultiplePaintingSelectedTriangles } = useMaps();
   const zoomRef = useRef(1);
   const currentCameraRef = useRef<ThreePerspectiveCamera | ThreeOrthographicCamera | null>(null);
   const updateWireframeOpacityRef = useRef<((cameraHeight: number) => void) | null>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   // Store camera state for seamless switching between camera types
   const cameraStateRef = useRef({
@@ -112,7 +114,7 @@ function MapViewer({
     const mapInfo = dimensions[mapType];
     const sizeZ = mapInfo.vertical * MESHES_IN_ROW * MESH_SIZE * SCALE;
     const sizeX = mapInfo.horizontal * MESHES_IN_COLUMN * MESH_SIZE * SCALE;
-    
+
     return {
       width: sizeX,
       height: sizeZ,
@@ -124,6 +126,51 @@ function MapViewer({
     };
   }, [mapType]);
 
+  // Handle lasso selection completion - project triangles to 2D and find those inside lasso
+  const handleLassoComplete = useCallback((lassoPoints: LassoPoint[]) => {
+    if (!triangleMap || !currentCameraRef.current || !canvasContainerRef.current) return;
+
+    const canvas = canvasContainerRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const camera = currentCameraRef.current;
+
+    const selectedIndices: number[] = [];
+
+    // Project each triangle centroid to screen space and check if inside lasso
+    triangleMap.forEach((triangle, index) => {
+      // Calculate triangle centroid in 3D
+      const centroid = new Vector3(
+        (triangle.transformedVertices.v0[0] + triangle.transformedVertices.v1[0] + triangle.transformedVertices.v2[0]) / 3,
+        (triangle.transformedVertices.v0[1] + triangle.transformedVertices.v1[1] + triangle.transformedVertices.v2[1]) / 3,
+        (triangle.transformedVertices.v0[2] + triangle.transformedVertices.v1[2] + triangle.transformedVertices.v2[2]) / 3
+      );
+
+      // Apply rotation to centroid (same rotation as WorldMesh uses)
+      const rotatedCentroid = centroid.clone();
+      const rotationCenter = new Vector3(mapDimensions.center.x, 0, mapDimensions.center.z);
+      rotatedCentroid.sub(rotationCenter);
+      rotatedCentroid.applyAxisAngle(new Vector3(0, 1, 0), rotation);
+      rotatedCentroid.add(rotationCenter);
+
+      // Project to normalized device coordinates (-1 to 1)
+      const projected = rotatedCentroid.clone().project(camera);
+
+      // Convert to screen coordinates
+      const screenX = ((projected.x + 1) / 2) * rect.width;
+      const screenY = ((-projected.y + 1) / 2) * rect.height;
+
+      // Check if point is visible (in front of camera) and inside lasso
+      if (projected.z < 1 && isPointInPolygon({ x: screenX, y: screenY }, lassoPoints)) {
+        selectedIndices.push(index);
+      }
+    });
+
+    // Add all selected triangles
+    if (selectedIndices.length > 0) {
+      addMultiplePaintingSelectedTriangles(selectedIndices);
+    }
+  }, [triangleMap, mapDimensions, rotation, addMultiplePaintingSelectedTriangles]);
+
   // Camera configuration
   const perspectiveConfig = useMemo(() => {
     const position = [
@@ -131,27 +178,27 @@ function MapViewer({
       CAMERA_HEIGHT[mapType],
       mapDimensions.center.z
     ] as [number, number, number];
-  
+
     return {
       position,
-      fov:    60,
-      near:   0.1,
-      far:    1000000
+      fov: 60,
+      near: 0.1,
+      far: 1000000
     };
   }, [mapDimensions, mapType]);
 
   const camera = cameraType === 'perspective' ? perspectiveCameraRef.current : orthographicCameraRef.current;
-  
+
   // Store current camera state before switching
   const storeCameraState = () => {
-    const currentCamera = previousCameraTypeRef.current === 'perspective' 
-      ? perspectiveCameraRef.current 
+    const currentCamera = previousCameraTypeRef.current === 'perspective'
+      ? perspectiveCameraRef.current
       : orthographicCameraRef.current;
-    
+
     if (currentCamera && controlsRef.current) {
       cameraStateRef.current.position.copy(currentCamera.position);
       cameraStateRef.current.target.copy(controlsRef.current.target);
-      
+
       if (currentCamera instanceof ThreeOrthographicCamera) {
         cameraStateRef.current.zoom = currentCamera.zoom;
       } else if (currentCamera instanceof ThreePerspectiveCamera) {
@@ -164,15 +211,15 @@ function MapViewer({
 
   // Restore camera state after switching
   const restoreCameraState = () => {
-    const newCamera = cameraType === 'perspective' 
-      ? perspectiveCameraRef.current 
+    const newCamera = cameraType === 'perspective'
+      ? perspectiveCameraRef.current
       : orthographicCameraRef.current;
-    
+
     if (newCamera && controlsRef.current && cameraStateRef.current) {
       newCamera.position.copy(cameraStateRef.current.position);
       newCamera.up.set(0, 1, 0);
       newCamera.lookAt(cameraStateRef.current.target);
-      
+
       if (newCamera instanceof ThreeOrthographicCamera) {
         newCamera.zoom = cameraStateRef.current.zoom;
         newCamera.updateProjectionMatrix();
@@ -184,7 +231,7 @@ function MapViewer({
         newCamera.up.set(0, 1, 0);
         newCamera.lookAt(cameraStateRef.current.target);
       }
-      
+
       controlsRef.current.object = newCamera;
       controlsRef.current.target.copy(cameraStateRef.current.target);
       controlsRef.current.update();
@@ -195,13 +242,13 @@ function MapViewer({
   useEffect(() => {
     if (previousCameraTypeRef.current !== cameraType && mapDimensions.width) {
       storeCameraState();
-      
+
       // Small delay to allow new camera to be created
       const timer = setTimeout(() => {
         restoreCameraState();
         previousCameraTypeRef.current = cameraType;
       }, 50);
-      
+
       return () => clearTimeout(timer);
     }
   }, [cameraType, mapDimensions]);
@@ -252,7 +299,7 @@ function MapViewer({
       camera.up.set(0, 1, 0);
       camera.lookAt(mapDimensions.center.x, 0, mapDimensions.center.z);
       camera.updateProjectionMatrix();
-      
+
       // Set initial controls target
       if (controlsRef.current) {
         controlsRef.current.target.set(mapDimensions.center.x, 0, mapDimensions.center.z);
@@ -319,10 +366,10 @@ function MapViewer({
       if (!(camera instanceof ThreeOrthographicCamera)) return;
       const halfH = mapDimensions.height / 2 + margin;
       const halfW = halfH * viewport.aspect;
-      camera.top    =  halfH;
+      camera.top = halfH;
       camera.bottom = -halfH;
-      camera.left   = -halfW;
-      camera.right  =  halfW;
+      camera.left = -halfW;
+      camera.right = halfW;
       camera.updateProjectionMatrix();
     }, [viewport.aspect, mapDimensions, margin, camera]);
     return null;
@@ -335,8 +382,8 @@ function MapViewer({
 
   return (
     <div className="relative flex flex-col w-full h-full">
-      <MapControls 
-        onRotate={handleRotate} 
+      <MapControls
+        onRotate={handleRotate}
         onReset={resetView}
         wireframe={wireframe}
         onWireframeToggle={onWireframeToggle}
@@ -356,7 +403,7 @@ function MapViewer({
         onAlternativesChange={onAlternativesChange}
       />
 
-      <div className="relative flex-1">
+      <div className="relative flex-1" ref={canvasContainerRef}>
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
             <div className="text-lg text-muted-foreground">Loading map...</div>
@@ -439,6 +486,12 @@ function MapViewer({
           )}
           {showModels && <ModelOverlay zoomRef={zoomRef} />}
         </Canvas>
+        {mode === 'lasso' && (
+          <LassoOverlay
+            onComplete={handleLassoComplete}
+            enabled={mode === 'lasso'}
+          />
+        )}
         {SHOW_DEBUG && <CameraDebugOverlay debugInfo={debugInfo} />}
       </div>
     </div>

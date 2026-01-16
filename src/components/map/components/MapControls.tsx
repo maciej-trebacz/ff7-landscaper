@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { RotateCcw, RotateCw, Home, Grid, Grip, Boxes, MousePointer, Download, Brush, Map, ArrowUpRight } from 'lucide-react';
+import { RotateCcw, RotateCw, Home, Grid, Grip, Boxes, MousePointer, Download, Brush, Map, ArrowUpRight, Lasso } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RenderingMode } from '../types';
 import { MapType, MapMode, AlternativeGroup } from '@/hooks/useMaps';
@@ -35,10 +35,10 @@ interface MapControlsProps {
   onAlternativesChange: (sections: number[]) => void;
 }
 
-export function MapControls({ 
-  onRotate, 
-  onReset, 
-  wireframe = false, 
+export function MapControls({
+  onRotate,
+  onReset,
+  wireframe = false,
   onWireframeToggle,
   showGrid = false,
   onGridToggle,
@@ -94,6 +94,24 @@ export function MapControls({
                 </TooltipTrigger>
                 <TooltipContent className="text-xs">
                   <p>Painting mode</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={mode === 'lasso' ? "default" : "outline"}
+                    size="icon"
+                    className={`h-6 w-6 ${mode === 'lasso' ? 'bg-primary hover:bg-primary/90' : ''}`}
+                    onClick={() => onModeChange('lasso')}
+                  >
+                    <Lasso className={`h-3.5 w-3.5 ${mode === 'lasso' ? 'text-primary-foreground' : ''}`} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="text-xs">
+                  <p>Lasso selection (multi-triangle)</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -344,8 +362,5 @@ export function MapControls({
       </div>
     </div>
   );
-} 
-
-
-
+}
 

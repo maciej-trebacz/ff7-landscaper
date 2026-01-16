@@ -5,6 +5,7 @@ import MapViewer from "../map/MapViewer";
 import { SelectionSidebar } from "@/components/map/components/SelectionSidebar";
 import { ExportImportSidebar } from "@/components/map/components/ExportImportSidebar";
 import { PaintingSidebar } from "@/components/map/components/PaintingSidebar";
+import { LassoSidebar } from "@/components/map/components/LassoSidebar";
 import { GridSelectionProvider } from '@/contexts/GridSelectionContext';
 import { useStatusBar } from "@/hooks/useStatusBar";
 
@@ -59,10 +60,10 @@ export function MapTab() {
         }
         return coords;
       }) as [
-        [number, number, number],
-        [number, number, number],
-        [number, number, number]
-      ];
+          [number, number, number],
+          [number, number, number],
+          [number, number, number]
+        ];
 
       updateTriangleVertices(prev, updatedVertices[0], updatedVertices[1], updatedVertices[2]);
 
@@ -138,6 +139,8 @@ export function MapTab() {
             <ExportImportSidebar />
           ) : mode === 'painting' ? (
             <PaintingSidebar />
+          ) : mode === 'lasso' ? (
+            <LassoSidebar />
           ) : (
             <SelectionSidebar
               selectedTriangle={selectedTriangle}

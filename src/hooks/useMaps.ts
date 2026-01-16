@@ -11,7 +11,7 @@ import { useLgpState } from './useLgpState';
 
 export type MapId = 'WM0' | 'WM2' | 'WM3';
 export type MapType = 'overworld' | 'underwater' | 'glacier';
-export type MapMode = 'selection' | 'export' | 'painting';
+export type MapMode = 'selection' | 'export' | 'painting' | 'lasso';
 
 export type AlternativeGroup = 0 | 1 | 2 | 3;
 type SupportedMapId = 0 | 2 | 3;
@@ -171,21 +171,21 @@ interface TriangleUpdates {
 const EMPTY_PAINTING_SET = new Set<number>();
 
 function createImageFromTexture(pixels: Uint8Array, width: number, height: number): string {
-    const canvas = document.createElement('canvas')
-    canvas.width = width
-    canvas.height = height
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return ''
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return ''
 
-    const imageData = ctx.createImageData(width, height)
-    for (let i = 0; i < pixels.length; i += 4) {
-        imageData.data[i] = pixels[i]     // Red (swap with Blue)
-        imageData.data[i + 1] = pixels[i + 1] // Green
-        imageData.data[i + 2] = pixels[i + 2]     // Blue (swap with Red)
-        imageData.data[i + 3] = pixels[i + 3] // Alpha
-    }
-    ctx.putImageData(imageData, 0, 0)
-    return canvas.toDataURL()
+  const imageData = ctx.createImageData(width, height)
+  for (let i = 0; i < pixels.length; i += 4) {
+    imageData.data[i] = pixels[i]     // Red (swap with Blue)
+    imageData.data[i + 1] = pixels[i + 1] // Green
+    imageData.data[i + 2] = pixels[i + 2]     // Blue (swap with Red)
+    imageData.data[i + 3] = pixels[i + 3] // Alpha
+  }
+  ctx.putImageData(imageData, 0, 0)
+  return canvas.toDataURL()
 }
 
 function cloneTextures(defs: WorldMapTexture[]): WorldMapTexture[] {
@@ -520,7 +520,7 @@ export function useMaps() {
       }
 
       const entry = prev.maps[activeId];
-      const nextEntry = mode === 'painting' ? entry : {
+      const nextEntry = (mode === 'painting' || mode === 'lasso') ? entry : {
         ...entry,
         paintingSelectedTriangles: new Set(),
       };
@@ -589,6 +589,30 @@ export function useMaps() {
       } else {
         nextSet.delete(faceIndex);
       }
+
+      const nextEntry: LoadedMapState = {
+        ...entry,
+        paintingSelectedTriangles: nextSet,
+      };
+
+      return {
+        ...prev,
+        maps: {
+          ...prev.maps,
+          [mapId]: nextEntry,
+        },
+      };
+    });
+  }, [setState, state.activeMapId]);
+
+  const addMultiplePaintingSelectedTriangles = useCallback((faceIndices: number[]) => {
+    if (state.activeMapId === null) return;
+    const mapId = state.activeMapId;
+
+    setState(prev => {
+      const entry = prev.maps[mapId];
+      const nextSet = new Set(entry.paintingSelectedTriangles);
+      faceIndices.forEach(idx => nextSet.add(idx));
 
       const nextEntry: LoadedMapState = {
         ...entry,
@@ -848,49 +872,49 @@ export function useMaps() {
     callbacks.updateColors?.();
   }, [markUnsavedChanges, setState, state, updateTriangle]);
 
-const updateTriangleVertices = useCallback((
-  triangle: TriangleWithVertices,
-  vertex0: [number, number, number],
-  vertex1: [number, number, number],
-  vertex2: [number, number, number]
-) => {
-  const activeId = state.activeMapId;
-  if (activeId === null) return;
-  const targetId = activeId as SupportedMapId;
-  const row = Math.floor(triangle.meshOffsetZ / MESH_SIZE);
-  const col = Math.floor(triangle.meshOffsetX / MESH_SIZE);
+  const updateTriangleVertices = useCallback((
+    triangle: TriangleWithVertices,
+    vertex0: [number, number, number],
+    vertex1: [number, number, number],
+    vertex2: [number, number, number]
+  ) => {
+    const activeId = state.activeMapId;
+    if (activeId === null) return;
+    const targetId = activeId as SupportedMapId;
+    const row = Math.floor(triangle.meshOffsetZ / MESH_SIZE);
+    const col = Math.floor(triangle.meshOffsetX / MESH_SIZE);
 
-  setState(prev => {
-    const entry = prev.maps[targetId];
-    if (!entry.triangleMap) return prev;
+    setState(prev => {
+      const entry = prev.maps[targetId];
+      if (!entry.triangleMap) return prev;
 
-    const updatePosition = entry.triangleCallbacks.updateTrianglePosition;
-    if (!updatePosition) return prev;
+      const updatePosition = entry.triangleCallbacks.updateTrianglePosition;
+      if (!updatePosition) return prev;
 
-    updatePosition(triangle, vertex0, vertex1, vertex2);
+      updatePosition(triangle, vertex0, vertex1, vertex2);
 
-    const index = entry.triangleMap.indexOf(triangle);
-    const nextTriangleMap = [...entry.triangleMap];
-    if (index !== -1) {
-      nextTriangleMap[index] = { ...triangle };
-    }
+      const index = entry.triangleMap.indexOf(triangle);
+      const nextTriangleMap = [...entry.triangleMap];
+      if (index !== -1) {
+        nextTriangleMap[index] = { ...triangle };
+      }
 
-    const nextEntry: LoadedMapState = {
-      ...entry,
-      triangleMap: nextTriangleMap,
-    };
+      const nextEntry: LoadedMapState = {
+        ...entry,
+        triangleMap: nextTriangleMap,
+      };
 
-    return {
-      ...prev,
-      maps: {
-        ...prev.maps,
-        [targetId]: nextEntry,
-      },
-    };
-  });
+      return {
+        ...prev,
+        maps: {
+          ...prev.maps,
+          [targetId]: nextEntry,
+        },
+      };
+    });
 
-  addChangedMesh(row, col);
-}, [addChangedMesh, setState, state.activeMapId]);
+    addChangedMesh(row, col);
+  }, [addChangedMesh, setState, state.activeMapId]);
 
   const updateSectionMesh = useCallback((row: number, col: number, newMesh: Mesh) => {
     if (state.activeMapId === null) return;
@@ -1087,6 +1111,7 @@ const updateTriangleVertices = useCallback((
     addChangedMesh,
     setMode,
     togglePaintingSelectedTriangle,
+    addMultiplePaintingSelectedTriangles,
     paintingSelectedTriangles,
     updateSelectedTriangles,
     updateSingleTriangle,

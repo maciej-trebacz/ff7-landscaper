@@ -178,12 +178,12 @@ export function WorldMesh({
 
   return (
     <group>
-      <group 
+      <group
         position={[mapCenter.x, 0, mapCenter.z]}
         rotation={[0, rotation, 0]}
       >
         <group position={[-mapCenter.x, 0, -mapCenter.z]}>
-          <mesh 
+          <mesh
             geometry={geometry}
             onPointerDown={mode === 'painting' ? handlePaintingPointerDown : handlePointerDown}
             onPointerMove={mode === 'painting' ? handlePaintingPointerMove : undefined}
@@ -191,8 +191,8 @@ export function WorldMesh({
             renderOrder={0}
           >
             {renderingMode === "textured" && texture ? (
-              <meshBasicMaterial 
-                map={texture} 
+              <meshBasicMaterial
+                map={texture}
                 side={THREE.DoubleSide}
                 transparent={true}
                 alphaTest={0.5}
@@ -217,8 +217,8 @@ export function WorldMesh({
           )}
           {showNormals && normalLinesGeometry && (
             <lineSegments geometry={normalLinesGeometry} renderOrder={11}>
-              <lineBasicMaterial 
-                color="#00ff00" 
+              <lineBasicMaterial
+                color="#00ff00"
                 linewidth={1}
                 transparent={true}
                 opacity={0.5}
@@ -230,24 +230,24 @@ export function WorldMesh({
           {onTriangleSelect && selectedTriangleGeometry && (
             <lineSegments renderOrder={10}>
               <edgesGeometry attach="geometry" args={[selectedTriangleGeometry]} />
-              <lineBasicMaterial 
-                color="#ff00ff" 
-                linewidth={2} 
-                depthTest={false} 
+              <lineBasicMaterial
+                color="#ff00ff"
+                linewidth={2}
+                depthTest={false}
                 depthWrite={false}
                 transparent
               />
             </lineSegments>
           )}
           {showGrid && (
-            <GridOverlay 
-              worldmapLength={worldmap.length} 
-              worldmapWidth={worldmap[0].length} 
+            <GridOverlay
+              worldmapLength={worldmap.length}
+              worldmapWidth={worldmap[0].length}
               active={typeof gridActiveOverride === 'boolean' ? gridActiveOverride : (mode === 'export')}
               preselectedCell={preselectedCell}
             />
           )}
-          {mode === 'painting' && paintingSelectedTriangles.size > 0 && triangleMap && (
+          {(mode === 'painting' || mode === 'lasso') && paintingSelectedTriangles.size > 0 && triangleMap && (
             Array.from(paintingSelectedTriangles).map(faceIndex => {
               const tri = triangleMap[faceIndex];
               if (!tri) return null;
@@ -264,8 +264,8 @@ export function WorldMesh({
                 <group key={faceIndex}>
                   {/* White semi-transparent fill */}
                   <mesh geometry={selectedGeometry} renderOrder={9}>
-                    <meshBasicMaterial 
-                      color="#ffffff" 
+                    <meshBasicMaterial
+                      color="#ffffff"
                       transparent={true}
                       opacity={0.33}
                       side={THREE.DoubleSide}
@@ -276,10 +276,10 @@ export function WorldMesh({
                   {/* Magenta outline */}
                   <lineSegments renderOrder={10}>
                     <edgesGeometry attach="geometry" args={[selectedGeometry]} />
-                    <lineBasicMaterial 
-                      color="#000" 
+                    <lineBasicMaterial
+                      color="#000"
                       opacity={0.33}
-                      depthTest={false} 
+                      depthTest={false}
                       depthWrite={false}
                       transparent
                     />
