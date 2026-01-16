@@ -17,8 +17,8 @@ import { useMessagesState } from "@/hooks/useMessagesState";
 interface LassoValues {
     type: string | null;
     region: string | null;
-    scriptId: string;
-    isChocobo: boolean;
+    scriptId: string | null;
+    isChocobo: boolean | null;
     texture: string | null;
 }
 
@@ -28,8 +28,8 @@ export function LassoSidebar() {
     const [values, setValues] = useState<LassoValues>({
         type: null,
         region: null,
-        scriptId: "0",
-        isChocobo: false,
+        scriptId: null,
+        isChocobo: null,
         texture: null
     });
 
@@ -43,13 +43,18 @@ export function LassoSidebar() {
         if (values.region !== null) {
             updates.locationId = parseInt(values.region);
         }
-        if (values.scriptId) {
+        if (values.scriptId !== null) {
             updates.script = parseInt(values.scriptId);
         }
         if (values.texture !== null) {
             updates.texture = parseInt(values.texture);
         }
-        updates.isChocobo = values.isChocobo;
+        if (values.isChocobo !== null) {
+            updates.isChocobo = values.isChocobo;
+        }
+
+        // Only apply if at least one field was set
+        if (Object.keys(updates).length === 0) return;
 
         updateSelectedTriangles(updates);
     };
@@ -135,7 +140,7 @@ export function LassoSidebar() {
                 <div className="space-y-1.5">
                     <Label>Script ID</Label>
                     <Select
-                        value={values.scriptId}
+                        value={values.scriptId ?? undefined}
                         onValueChange={(value) => setValues(prev => ({ ...prev, scriptId: value }))}
                     >
                         <SelectTrigger className="h-8">
@@ -156,10 +161,14 @@ export function LassoSidebar() {
                 <div className="flex items-center space-x-2">
                     <Checkbox
                         id="chocobo-lasso"
-                        checked={values.isChocobo}
+                        checked={values.isChocobo === true}
+                        className={values.isChocobo === null ? 'opacity-50' : ''}
                         onCheckedChange={(checked) => setValues(prev => ({ ...prev, isChocobo: checked === true }))}
                     />
-                    <Label htmlFor="chocobo-lasso">Is Chocobo Area</Label>
+                    <Label htmlFor="chocobo-lasso" className="flex items-center gap-2">
+                        Is Chocobo Area
+                        {values.isChocobo === null && <span className="text-xs text-muted-foreground">(unchanged)</span>}
+                    </Label>
                 </div>
 
                 <Button
