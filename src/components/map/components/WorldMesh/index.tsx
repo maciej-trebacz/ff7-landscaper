@@ -253,59 +253,60 @@ export function WorldMesh({
     }
   };
 
-  // Handle global pointer up for lasso
-  useEffect(() => {
-    const handleGlobalPointerUp = () => {
-      if (!lassoActiveRef.current || paintingMode !== 'lasso' || mode !== 'painting') return;
+  const handlePaintingPointerUp = (event: ThreeEvent<PointerEvent>) => {
+    if (!lassoActiveRef.current || paintingMode !== 'lasso' || mode !== 'painting') return;
+    if (!triangleMap) return;
 
-      const polygon = lassoPointsRef.current;
-      if (polygon.length >= 3 && triangleMap) {
-        const containsPoint = (px: number, pz: number) => {
-          let inside = false;
-          for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-            const xi = polygon[i].x;
-            const zi = polygon[i].z;
-            const xj = polygon[j].x;
-            const zj = polygon[j].z;
-            const intersect = ((zi > pz) !== (zj > pz)) && (px < ((xj - xi) * (pz - zi)) / (zj - zi) + xi);
-            if (intersect) inside = !inside;
-          }
-          return inside;
-        };
-
-        const lassoSelected = new Set<number>();
-        triangleMap.forEach((tri, index) => {
-          const cx = (tri.transformedVertices.v0[0] + tri.transformedVertices.v1[0] + tri.transformedVertices.v2[0]) / 3;
-          const cz = (tri.transformedVertices.v0[2] + tri.transformedVertices.v1[2] + tri.transformedVertices.v2[2]) / 3;
-          if (containsPoint(cx, cz)) {
-            lassoSelected.add(index);
-          }
-        });
-
-        if (lassoSelected.size > 0) {
-          if (lassoOperationRef.current === 'replace') {
-            setPaintingSelectedTriangles(lassoSelected);
-          } else {
-            const next = new Set(paintingSelectedTriangles);
-            if (lassoOperationRef.current === 'add') {
-              lassoSelected.forEach(index => next.add(index));
-            } else {
-              lassoSelected.forEach(index => next.delete(index));
-            }
-            setPaintingSelectedTriangles(next);
-          }
-        }
-      }
-
+    const polygon = lassoPointsRef.current;
+    if (polygon.length < 3) {
       setLassoActive(false);
       lassoActiveRef.current = false;
       setLassoPoints([]);
       lassoPointsRef.current = [];
+      return;
+    }
+
+    const containsPoint = (px: number, pz: number) => {
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].x;
+        const zi = polygon[i].z;
+        const xj = polygon[j].x;
+        const zj = polygon[j].z;
+        const intersect = ((zi > pz) !== (zj > pz)) && (px < ((xj - xi) * (pz - zi)) / (zj - zi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
     };
 
-    window.addEventListener('pointerup', handleGlobalPointerUp);
-    return () => window.removeEventListener('pointerup', handleGlobalPointerUp);
-  }, [mode, paintingMode, triangleMap, paintingSelectedTriangles, setPaintingSelectedTriangles]);
+    const lassoSelected = new Set<number>();
+    triangleMap.forEach((tri, index) => {
+      const cx = (tri.transformedVertices.v0[0] + tri.transformedVertices.v1[0] + tri.transformedVertices.v2[0]) / 3;
+      const cz = (tri.transformedVertices.v0[2] + tri.transformedVertices.v1[2] + tri.transformedVertices.v2[2]) / 3;
+      if (containsPoint(cx, cz)) {
+        lassoSelected.add(index);
+      }
+    });
+
+    if (lassoSelected.size > 0) {
+      if (lassoOperationRef.current === 'replace') {
+        setPaintingSelectedTriangles(lassoSelected);
+      } else {
+        const next = new Set(paintingSelectedTriangles);
+        if (lassoOperationRef.current === 'add') {
+          lassoSelected.forEach(index => next.add(index));
+        } else {
+          lassoSelected.forEach(index => next.delete(index));
+        }
+        setPaintingSelectedTriangles(next);
+      }
+    }
+
+    setLassoActive(false);
+    lassoActiveRef.current = false;
+    setLassoPoints([]);
+    lassoPointsRef.current = [];
+  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -384,6 +385,7 @@ export function WorldMesh({
             geometry={geometry}
             onPointerDown={mode === 'painting' ? handlePaintingPointerDown : handlePointerDown}
             onPointerMove={mode === 'painting' ? handlePaintingPointerMove : undefined}
+            onPointerUp={mode === 'painting' ? handlePaintingPointerUp : undefined}
             onClick={mode === 'painting' ? handlePaintingClick : handleClick}
             renderOrder={0}
           >
