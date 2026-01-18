@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
+import { Line } from '@react-three/drei';
 import { useGeometry } from './hooks';
 import { useSelectedTriangleGeometry } from './hooks';
 import { RenderingMode } from '../../types';
@@ -50,8 +51,32 @@ export function WorldMesh({
   const [paintingDragActive, setPaintingDragActive] = useState(false);
   const [paintingDragStartMode, setPaintingDragStartMode] = useState<boolean | null>(null);
   const [paintingHasToggled, setPaintingHasToggled] = useState(false);
+  const [lassoActive, setLassoActive] = useState(false);
+  const [lassoPoints, setLassoPoints] = useState<{ x: number; y: number; z: number }[]>([]);
+  const [lassoOperation, setLassoOperation] = useState<'replace' | 'add' | 'subtract'>('replace');
+  const [pastePreviewTargets, setPastePreviewTargets] = useState<number[]>([]);
+
+  const lassoPointsRef = useRef<{ x: number; y: number; z: number }[]>([]);
+  const lassoActiveRef = useRef(false);
+  const lassoOperationRef = useRef<'replace' | 'add' | 'subtract'>('replace');
+
   const wireframeMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
-  const { textures, worldmap, mapType, paintingSelectedTriangles, togglePaintingSelectedTriangle, setTriangleMap } = useMaps();
+  const {
+    textures,
+    worldmap,
+    mapType,
+    paintingSelectedTriangles,
+    togglePaintingSelectedTriangle,
+    setTriangleMap,
+    paintingMode,
+    setPaintingSelectedTriangles,
+    lassoClipboard,
+    lassoPasteActive,
+    lassoPasteRotationDeg,
+    applyLassoPaste,
+    setLassoPasteActive,
+    setLassoPasteRotation,
+  } = useMaps();
 
   const { loadTextureAtlas } = useTextureAtlas();
   const { texture, canvas, texturePositions } = loadTextureAtlas(textures, mapType);
@@ -124,6 +149,28 @@ export function WorldMesh({
 
   const handlePaintingPointerDown = (event: ThreeEvent<PointerEvent>) => {
     if (event.button !== 0 || disablePainting) return;
+    if (lassoPasteActive) return;
+    if (paintingMode === 'lasso') {
+      if (mode === 'painting') {
+        setLassoActive(true);
+        lassoActiveRef.current = true;
+
+        const operation: 'replace' | 'add' | 'subtract' =
+          event.altKey
+            ? 'subtract'
+            : paintingSelectedTriangles.size === 0
+              ? 'replace'
+              : 'add';
+
+        setLassoOperation(operation);
+        lassoOperationRef.current = operation;
+
+        const point = { x: event.point.x, y: event.point.y, z: event.point.z };
+        setLassoPoints([point]);
+        lassoPointsRef.current = [point];
+      }
+      return;
+    }
     setPaintingMouseDownPos({ x: event.clientX, y: event.clientY });
     if (mode === 'painting' && typeof event.faceIndex === 'number') {
       const alreadySelected = paintingSelectedTriangles.has(event.faceIndex);
@@ -135,6 +182,65 @@ export function WorldMesh({
 
   const handlePaintingPointerMove = (event: ThreeEvent<PointerEvent>) => {
     if (disablePainting) return;
+    if (lassoPasteActive && lassoClipboard && triangleMap) {
+      const center = { x: event.point.x, z: event.point.z };
+
+      const rotationRad = (lassoPasteRotationDeg * Math.PI) / 180;
+      const cos = Math.cos(rotationRad);
+      const sin = Math.sin(rotationRad);
+
+      const centers = triangleMap.map((tri, index) => {
+        const cx = (tri.transformedVertices.v0[0] + tri.transformedVertices.v1[0] + tri.transformedVertices.v2[0]) / 3;
+        const cz = (tri.transformedVertices.v0[2] + tri.transformedVertices.v1[2] + tri.transformedVertices.v2[2]) / 3;
+        return { index, cx, cz };
+      });
+
+      const used = new Set<number>();
+      const targets: number[] = [];
+
+      lassoClipboard.sourceFaceIndices.forEach(sourceIndex => {
+        const sourceCenter = centers[sourceIndex];
+        if (!sourceCenter) return;
+
+        const dx = sourceCenter.cx - lassoClipboard.centerX;
+        const dz = sourceCenter.cz - lassoClipboard.centerZ;
+
+        const rx = cos * dx - sin * dz;
+        const rz = sin * dx + cos * dz;
+
+        const tx = center.x + rx;
+        const tz = center.z + rz;
+
+        let bestIndex = -1;
+        let bestDistSq = Infinity;
+
+        centers.forEach(c => {
+          if (used.has(c.index)) return;
+          const ddx = c.cx - tx;
+          const ddz = c.cz - tz;
+          const distSq = ddx * ddx + ddz * ddz;
+          if (distSq < bestDistSq) {
+            bestDistSq = distSq;
+            bestIndex = c.index;
+          }
+        });
+
+        if (bestIndex !== -1) {
+          used.add(bestIndex);
+          targets.push(bestIndex);
+        }
+      });
+
+      setPastePreviewTargets(targets);
+      return;
+    }
+    if (paintingMode === 'lasso') {
+      if (!lassoActive) return;
+      const point = { x: event.point.x, y: event.point.y, z: event.point.z };
+      setLassoPoints(prev => [...prev, point]);
+      lassoPointsRef.current.push(point);
+      return;
+    }
     if (!paintingMouseDownPos) return;
     const dx = Math.abs(event.clientX - paintingMouseDownPos.x);
     const dy = Math.abs(event.clientY - paintingMouseDownPos.y);
@@ -147,8 +253,100 @@ export function WorldMesh({
     }
   };
 
+  const handlePaintingPointerUp = (event: ThreeEvent<PointerEvent>) => {
+    if (!lassoActiveRef.current || paintingMode !== 'lasso' || mode !== 'painting') return;
+    if (!triangleMap) return;
+
+    const polygon = lassoPointsRef.current;
+    if (polygon.length < 3) {
+      setLassoActive(false);
+      lassoActiveRef.current = false;
+      setLassoPoints([]);
+      lassoPointsRef.current = [];
+      return;
+    }
+
+    const containsPoint = (px: number, pz: number) => {
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].x;
+        const zi = polygon[i].z;
+        const xj = polygon[j].x;
+        const zj = polygon[j].z;
+        const intersect = ((zi > pz) !== (zj > pz)) && (px < ((xj - xi) * (pz - zi)) / (zj - zi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    };
+
+    const lassoSelected = new Set<number>();
+    triangleMap.forEach((tri, index) => {
+      const cx = (tri.transformedVertices.v0[0] + tri.transformedVertices.v1[0] + tri.transformedVertices.v2[0]) / 3;
+      const cz = (tri.transformedVertices.v0[2] + tri.transformedVertices.v1[2] + tri.transformedVertices.v2[2]) / 3;
+      if (containsPoint(cx, cz)) {
+        lassoSelected.add(index);
+      }
+    });
+
+    if (lassoSelected.size > 0) {
+      if (lassoOperationRef.current === 'replace') {
+        setPaintingSelectedTriangles(lassoSelected);
+      } else {
+        const next = new Set(paintingSelectedTriangles);
+        if (lassoOperationRef.current === 'add') {
+          lassoSelected.forEach(index => next.add(index));
+        } else {
+          lassoSelected.forEach(index => next.delete(index));
+        }
+        setPaintingSelectedTriangles(next);
+      }
+    }
+
+    setLassoActive(false);
+    lassoActiveRef.current = false;
+    setLassoPoints([]);
+    lassoPointsRef.current = [];
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!lassoPasteActive || mode !== 'painting') return;
+      if (event.key !== 'q' && event.key !== 'Q' && event.key !== 'e' && event.key !== 'E') return;
+
+      event.preventDefault();
+
+      const step = 5;
+      let next = lassoPasteRotationDeg;
+      if (event.key === 'q' || event.key === 'Q') {
+        next -= step;
+      } else {
+        next += step;
+      }
+
+      if (next > 180) next -= 360;
+      if (next < -180) next += 360;
+
+      setLassoPasteRotation(next);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lassoPasteActive, lassoPasteRotationDeg, mode, setLassoPasteRotation]);
+
   const handlePaintingClick = (event: ThreeEvent<MouseEvent>) => {
     if (event.button !== 0 || disablePainting) return;
+    if (lassoPasteActive) {
+      if (pastePreviewTargets.length > 0) {
+        applyLassoPaste(pastePreviewTargets);
+      }
+      setLassoPasteActive(false);
+      setPastePreviewTargets([]);
+      return;
+    }
+    if (paintingMode === 'lasso') {
+      // Lasso is handled by global pointer up
+      return;
+    }
     if (mode === 'painting' && typeof event.faceIndex === 'number') {
       if (!paintingDragActive && !paintingHasToggled) {
         const isSelected = paintingSelectedTriangles.has(event.faceIndex);
@@ -187,6 +385,7 @@ export function WorldMesh({
             geometry={geometry}
             onPointerDown={mode === 'painting' ? handlePaintingPointerDown : handlePointerDown}
             onPointerMove={mode === 'painting' ? handlePaintingPointerMove : undefined}
+            onPointerUp={mode === 'painting' ? handlePaintingPointerUp : undefined}
             onClick={mode === 'painting' ? handlePaintingClick : handleClick}
             renderOrder={0}
           >
@@ -246,6 +445,43 @@ export function WorldMesh({
               active={typeof gridActiveOverride === 'boolean' ? gridActiveOverride : (mode === 'export')}
               preselectedCell={preselectedCell}
             />
+          )}
+          {paintingMode === 'lasso' && lassoPoints.length > 0 && (
+            <Line
+              points={lassoPoints.map(p => [p.x, p.y + 2, p.z] as [number, number, number])}
+              color={lassoOperation === 'subtract' ? '#ff0000' : '#ffff00'}
+              lineWidth={3}
+              depthTest={false}
+            />
+          )}
+          {lassoPasteActive && pastePreviewTargets.length > 0 && triangleMap && (
+            Array.from(new Set(pastePreviewTargets)).map(faceIndex => {
+              const tri = triangleMap[faceIndex];
+              if (!tri) return null;
+              const highlightPositions = new Float32Array(9);
+              highlightPositions.set([
+                tri.transformedVertices.v0[0], tri.transformedVertices.v0[1] + SELECTION_Y_OFFSET, tri.transformedVertices.v0[2],
+                tri.transformedVertices.v1[0], tri.transformedVertices.v1[1] + SELECTION_Y_OFFSET, tri.transformedVertices.v1[2],
+                tri.transformedVertices.v2[0], tri.transformedVertices.v2[1] + SELECTION_Y_OFFSET, tri.transformedVertices.v2[2]
+              ], 0);
+              const previewGeometry = new THREE.BufferGeometry();
+              previewGeometry.setAttribute('position', new THREE.Float32BufferAttribute(highlightPositions, 3));
+              previewGeometry.computeVertexNormals();
+              return (
+                <group key={`paste-${faceIndex}`}>
+                  <mesh geometry={previewGeometry} renderOrder={8}>
+                    <meshBasicMaterial
+                      color="#ff8800"
+                      transparent={true}
+                      opacity={0.4}
+                      side={THREE.DoubleSide}
+                      depthTest={false}
+                      depthWrite={false}
+                    />
+                  </mesh>
+                </group>
+              );
+            })
           )}
           {mode === 'painting' && paintingSelectedTriangles.size > 0 && triangleMap && (
             Array.from(paintingSelectedTriangles).map(faceIndex => {
