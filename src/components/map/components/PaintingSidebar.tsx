@@ -34,7 +34,23 @@ interface CopiedTriangleData {
 }
 
 export function PaintingSidebar() {
-  const { paintingSelectedTriangles, worldmap, updateSelectedTriangles, updateTriangle, textures, togglePaintingSelectedTriangle, triangleMap, paintingMode, setPaintingMode } = useMaps();
+  const {
+    paintingSelectedTriangles,
+    worldmap,
+    updateSelectedTriangles,
+    updateTriangle,
+    textures,
+    togglePaintingSelectedTriangle,
+    triangleMap,
+    paintingMode,
+    setPaintingMode,
+    lassoClipboard,
+    lassoPasteActive,
+    lassoPasteRotationDeg,
+    copyLassoSelection,
+    setLassoPasteActive,
+    setLassoPasteRotation,
+  } = useMaps();
   const { messages } = useMessagesState();
   const [values, setValues] = useState<PaintingValues>({
     type: null,
@@ -116,6 +132,20 @@ export function PaintingSidebar() {
     handleClearSelection();
   };
 
+  const handleCopyArea = () => {
+    if (paintingSelectedTriangles.size === 0) return;
+    copyLassoSelection();
+  };
+
+  const handleStartPasteArea = () => {
+    if (!lassoClipboard) return;
+    setLassoPasteActive(true);
+  };
+
+  const handleCancelPasteArea = () => {
+    setLassoPasteActive(false);
+  };
+
   return (
     <>
       <h3 className="text-sm font-medium">Painting Mode</h3>
@@ -146,6 +176,51 @@ export function PaintingSidebar() {
           >
             Paste Texture & UVs
           </Button>
+        </div>
+        <div className="space-y-2">
+          <div className="flex space-x-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-xs px-2"
+              onClick={handleCopyArea}
+              disabled={paintingSelectedTriangles.size === 0}
+            >
+              Copy Area
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-xs px-2"
+              onClick={handleStartPasteArea}
+              disabled={!lassoClipboard || lassoPasteActive}
+            >
+              Paste Area
+            </Button>
+            {lassoPasteActive && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 text-xs px-2"
+                onClick={handleCancelPasteArea}
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
+          {lassoPasteActive && (
+            <div className="space-y-1">
+              <Label>Paste Rotation</Label>
+              <input
+                type="range"
+                min={-180}
+                max={180}
+                value={lassoPasteRotationDeg}
+                onChange={(e) => setLassoPasteRotation(parseFloat(e.target.value))}
+                className="w-full"
+              />
+            </div>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label>Triangle Type</Label>

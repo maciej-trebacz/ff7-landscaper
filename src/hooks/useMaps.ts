@@ -143,6 +143,13 @@ interface LoadedMapState {
   texturesLoaded: boolean;
   paintingSelectedTriangles: Set<number>;
   paintingMode: PaintingMode;
+  lassoClipboard: {
+    sourceFaceIndices: number[];
+    centerX: number;
+    centerZ: number;
+  } | null;
+  lassoPasteActive: boolean;
+  lassoPasteRotationDeg: number;
   selectedTriangleIndex: number | null;
   loaded: boolean;
 }
@@ -213,6 +220,9 @@ function createInitialEntry(config: MapConfig): LoadedMapState {
     texturesLoaded: false,
     paintingSelectedTriangles: new Set(),
     paintingMode: 'click',
+    lassoClipboard: null,
+    lassoPasteActive: false,
+    lassoPasteRotationDeg: 0,
     selectedTriangleIndex: null,
     loaded: false,
   };
@@ -837,6 +847,182 @@ export function useMaps() {
     callbacks.updateColors?.();
   }, [markUnsavedChanges, setState, state, updateTriangle]);
 
+  const copyLassoSelection = useCallback(() => {
+    if (state.activeMapId === null) return;
+    const mapId = state.activeMapId;
+    const entry = state.maps[mapId];
+    if (!entry.triangleMap || entry.paintingSelectedTriangles.size === 0) return;
+
+    const sourceFaceIndices = Array.from(entry.paintingSelectedTriangles);
+    let sumX = 0;
+    let sumZ = 0;
+    let count = 0;
+
+    sourceFaceIndices.forEach(faceIndex => {
+      const tri = entry.triangleMap?.[faceIndex];
+      if (!tri) return;
+      const cx = (tri.transformedVertices.v0[0] + tri.transformedVertices.v1[0] + tri.transformedVertices.v2[0]) / 3;
+      const cz = (tri.transformedVertices.v0[2] + tri.transformedVertices.v1[2] + tri.transformedVertices.v2[2]) / 3;
+      sumX += cx;
+      sumZ += cz;
+      count += 1;
+    });
+
+    if (count === 0) return;
+
+    const centerX = sumX / count;
+    const centerZ = sumZ / count;
+
+    setState(prev => {
+      const current = prev.maps[mapId];
+      const nextEntry: LoadedMapState = {
+        ...current,
+        lassoClipboard: {
+          sourceFaceIndices,
+          centerX,
+          centerZ,
+        },
+      };
+
+      return {
+        ...prev,
+        maps: {
+          ...prev.maps,
+          [mapId]: nextEntry,
+        },
+      };
+    });
+  }, [setState, state]);
+
+  const setLassoPasteActive = useCallback((active: boolean) => {
+    if (state.activeMapId === null) return;
+    const mapId = state.activeMapId;
+
+    setState(prev => {
+      const current = prev.maps[mapId];
+      const nextEntry: LoadedMapState = {
+        ...current,
+        lassoPasteActive: active,
+      };
+
+      return {
+        ...prev,
+        maps: {
+          ...prev.maps,
+          [mapId]: nextEntry,
+        },
+      };
+    });
+  }, [setState, state.activeMapId]);
+
+  const setLassoPasteRotation = useCallback((rotationDeg: number) => {
+    if (state.activeMapId === null) return;
+    const mapId = state.activeMapId;
+
+    setState(prev => {
+      const current = prev.maps[mapId];
+      const nextEntry: LoadedMapState = {
+        ...current,
+        lassoPasteRotationDeg: rotationDeg,
+      };
+
+      return {
+        ...prev,
+        maps: {
+          ...prev.maps,
+          [mapId]: nextEntry,
+        },
+      };
+    });
+  }, [setState, state.activeMapId]);
+
+  const applyLassoPaste = useCallback((targetFaceIndices: number[]) => {
+    if (state.activeMapId === null) return;
+    const mapId = state.activeMapId;
+    const entry = state.maps[mapId];
+    if (!entry.triangleMap || !entry.lassoClipboard) return;
+
+    const { sourceFaceIndices } = entry.lassoClipboard;
+    if (sourceFaceIndices.length === 0 || targetFaceIndices.length === 0) return;
+
+    const count = Math.min(sourceFaceIndices.length, targetFaceIndices.length);
+    const modifiedKeys = new Set<string>();
+
+    for (let i = 0; i < count; i++) {
+      const srcIndex = sourceFaceIndices[i];
+      const dstIndex = targetFaceIndices[i];
+
+      const srcTriangle = entry.triangleMap[srcIndex];
+      const dstTriangle = entry.triangleMap[dstIndex];
+      if (!srcTriangle || !dstTriangle) continue;
+
+      const updates: TriangleUpdates = {
+        type: srcTriangle.trianglePtr.type,
+        locationId: srcTriangle.trianglePtr.locationId,
+        script: srcTriangle.trianglePtr.script,
+        isChocobo: srcTriangle.trianglePtr.isChocobo,
+        texture: srcTriangle.trianglePtr.texture,
+        uVertex0: srcTriangle.trianglePtr.uVertex0,
+        vVertex0: srcTriangle.trianglePtr.vVertex0,
+        uVertex1: srcTriangle.trianglePtr.uVertex1,
+        vVertex1: srcTriangle.trianglePtr.vVertex1,
+        uVertex2: srcTriangle.trianglePtr.uVertex2,
+        vVertex2: srcTriangle.trianglePtr.vVertex2,
+      };
+
+      const [row, col] = updateTriangle(dstTriangle, updates);
+      if (row >= 0 && col >= 0) {
+        modifiedKeys.add(`${row}:${col}`);
+      }
+    }
+
+    if (modifiedKeys.size === 0) return;
+
+    let added = false;
+    setState(prev => {
+      const current = prev.maps[mapId];
+      if (!current.meshGrid || !current.triangleMap) return prev;
+
+      const nextKeys = new Set(current.changedMeshKeys);
+      const nextMeshes = current.changedMeshes.slice();
+
+      modifiedKeys.forEach(key => {
+        const [rowStr, colStr] = key.split(':');
+        const row = Number(rowStr);
+        const col = Number(colStr);
+        const mesh = current.meshGrid?.[row]?.[col];
+        if (!mesh) return;
+        const mKey = meshKey(mesh);
+        if (nextKeys.has(mKey)) return;
+        nextKeys.add(mKey);
+        nextMeshes.push(mesh);
+        added = true;
+      });
+
+      const nextEntry: LoadedMapState = {
+        ...current,
+        changedMeshes: nextMeshes,
+        changedMeshKeys: nextKeys,
+        triangleMap: [...current.triangleMap],
+      };
+
+      return {
+        ...prev,
+        maps: {
+          ...prev.maps,
+          [mapId]: nextEntry,
+        },
+      };
+    });
+
+    if (added) {
+      markUnsavedChanges();
+    }
+
+    const callbacks = state.maps[mapId].triangleCallbacks;
+    callbacks.updateColors?.();
+  }, [markUnsavedChanges, setState, state, updateTriangle]);
+
   const updateSingleTriangle = useCallback((updates: TriangleUpdates) => {
     if (state.activeMapId === null) return;
     const mapId = state.activeMapId;
@@ -1142,6 +1328,13 @@ const updateTriangleVertices = useCallback((
     togglePaintingSelectedTriangle,
     paintingSelectedTriangles,
     setPaintingSelectedTriangles,
+    lassoClipboard: currentEntry?.lassoClipboard ?? null,
+    lassoPasteActive: currentEntry?.lassoPasteActive ?? false,
+    lassoPasteRotationDeg: currentEntry?.lassoPasteRotationDeg ?? 0,
+    copyLassoSelection,
+    setLassoPasteActive,
+    setLassoPasteRotation,
+    applyLassoPaste,
     updateSelectedTriangles,
     updateSingleTriangle,
     updateTriangle,
