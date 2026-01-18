@@ -12,6 +12,7 @@ import { useLgpState } from './useLgpState';
 export type MapId = 'WM0' | 'WM2' | 'WM3';
 export type MapType = 'overworld' | 'underwater' | 'glacier';
 export type MapMode = 'selection' | 'export' | 'painting';
+export type PaintingMode = 'click' | 'lasso';
 
 export type AlternativeGroup = 0 | 1 | 2 | 3;
 type SupportedMapId = 0 | 2 | 3;
@@ -141,6 +142,7 @@ interface LoadedMapState {
   textures: WorldMapTexture[];
   texturesLoaded: boolean;
   paintingSelectedTriangles: Set<number>;
+  paintingMode: PaintingMode;
   selectedTriangleIndex: number | null;
   loaded: boolean;
 }
@@ -210,6 +212,7 @@ function createInitialEntry(config: MapConfig): LoadedMapState {
     textures: [],
     texturesLoaded: false,
     paintingSelectedTriangles: new Set(),
+    paintingMode: 'click',
     selectedTriangleIndex: null,
     loaded: false,
   };
@@ -436,6 +439,7 @@ export function useMaps() {
   const textures = currentEntry?.textures ?? [];
   const triangleMap = currentEntry?.triangleMap ?? null;
   const paintingSelectedTriangles = currentEntry?.paintingSelectedTriangles ?? EMPTY_PAINTING_SET;
+  const paintingMode = currentEntry?.paintingMode ?? 'click';
   const loaded = currentEntry?.loaded ?? false;
   const selectedTriangle = currentEntry?.selectedTriangleIndex ?? null;
   const enabledAlternatives = currentEntry?.enabledAlternativeSections ?? [];
@@ -488,6 +492,7 @@ export function useMaps() {
         triangleMap: null,
         triangleCallbacks: {},
         paintingSelectedTriangles: new Set(),
+        paintingMode: previousEntry.paintingMode ?? 'click',
         selectedTriangleIndex: null,
         loaded: true,
         textures: previousEntry.textures.length ? previousEntry.textures : cloneTextures(config.textureDefs),
@@ -535,6 +540,31 @@ export function useMaps() {
       };
     });
   }, [setState]);
+
+  const setPaintingMode = useCallback((mode: PaintingMode) => {
+    if (state.activeMapId === null) return;
+    const mapId = state.activeMapId;
+
+    setState(prev => {
+      const entry = prev.maps[mapId];
+      if (entry.paintingMode === mode) {
+        return prev;
+      }
+
+      const nextEntry: LoadedMapState = {
+        ...entry,
+        paintingMode: mode,
+      };
+
+      return {
+        ...prev,
+        maps: {
+          ...prev.maps,
+          [mapId]: nextEntry,
+        },
+      };
+    });
+  }, [setState, state.activeMapId]);
 
   const addChangedMesh = useCallback((row: number, col: number) => {
     if (state.activeMapId === null) return;
@@ -593,6 +623,27 @@ export function useMaps() {
       const nextEntry: LoadedMapState = {
         ...entry,
         paintingSelectedTriangles: nextSet,
+      };
+
+      return {
+        ...prev,
+        maps: {
+          ...prev.maps,
+          [mapId]: nextEntry,
+        },
+      };
+    });
+  }, [setState, state.activeMapId]);
+
+  const setPaintingSelectedTriangles = useCallback((faceIndices: Set<number>) => {
+    if (state.activeMapId === null) return;
+    const mapId = state.activeMapId;
+
+    setState(prev => {
+      const entry = prev.maps[mapId];
+      const nextEntry: LoadedMapState = {
+        ...entry,
+        paintingSelectedTriangles: new Set(faceIndices),
       };
 
       return {
@@ -1077,6 +1128,7 @@ const updateTriangleVertices = useCallback((
     getTexturesForType,
     enabledAlternatives,
     triangleMap,
+    paintingMode,
     selectedTriangle,
     loaded,
     loadMap,
@@ -1086,8 +1138,10 @@ const updateTriangleVertices = useCallback((
     setMapType,
     addChangedMesh,
     setMode,
+    setPaintingMode,
     togglePaintingSelectedTriangle,
     paintingSelectedTriangles,
+    setPaintingSelectedTriangles,
     updateSelectedTriangles,
     updateSingleTriangle,
     updateTriangle,

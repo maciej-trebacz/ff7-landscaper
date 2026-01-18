@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
+import { Line } from '@react-three/drei';
 import { useGeometry } from './hooks';
 import { useSelectedTriangleGeometry } from './hooks';
 import { RenderingMode } from '../../types';
@@ -50,8 +51,17 @@ export function WorldMesh({
   const [paintingDragActive, setPaintingDragActive] = useState(false);
   const [paintingDragStartMode, setPaintingDragStartMode] = useState<boolean | null>(null);
   const [paintingHasToggled, setPaintingHasToggled] = useState(false);
+  const [lassoActive, setLassoActive] = useState(false);
+  const [lassoPoints, setLassoPoints] = useState<{ x: number; y: number; z: number }[]>([]);
+  const [lassoOperation, setLassoOperation] = useState<'replace' | 'add' | 'subtract'>('replace');
+  
+  // Refs for event handlers to access latest state without re-binding
+  const lassoPointsRef = useRef<{ x: number; y: number; z: number }[]>([]);
+  const lassoActiveRef = useRef(false);
+  const lassoOperationRef = useRef<'replace' | 'add' | 'subtract'>('replace');
+
   const wireframeMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
-  const { textures, worldmap, mapType, paintingSelectedTriangles, togglePaintingSelectedTriangle, setTriangleMap } = useMaps();
+  const { textures, worldmap, mapType, paintingSelectedTriangles, togglePaintingSelectedTriangle, setTriangleMap, paintingMode, setPaintingSelectedTriangles } = useMaps();
 
   const { loadTextureAtlas } = useTextureAtlas();
   const { texture, canvas, texturePositions } = loadTextureAtlas(textures, mapType);
@@ -124,6 +134,27 @@ export function WorldMesh({
 
   const handlePaintingPointerDown = (event: ThreeEvent<PointerEvent>) => {
     if (event.button !== 0 || disablePainting) return;
+    if (paintingMode === 'lasso') {
+      if (mode === 'painting') {
+        setLassoActive(true);
+        lassoActiveRef.current = true;
+
+        const operation: 'replace' | 'add' | 'subtract' =
+          event.altKey
+            ? 'subtract'
+            : paintingSelectedTriangles.size === 0
+              ? 'replace'
+              : 'add';
+
+        setLassoOperation(operation);
+        lassoOperationRef.current = operation;
+
+        const point = { x: event.point.x, y: event.point.y, z: event.point.z };
+        setLassoPoints([point]);
+        lassoPointsRef.current = [point];
+      }
+      return;
+    }
     setPaintingMouseDownPos({ x: event.clientX, y: event.clientY });
     if (mode === 'painting' && typeof event.faceIndex === 'number') {
       const alreadySelected = paintingSelectedTriangles.has(event.faceIndex);
@@ -135,6 +166,13 @@ export function WorldMesh({
 
   const handlePaintingPointerMove = (event: ThreeEvent<PointerEvent>) => {
     if (disablePainting) return;
+    if (paintingMode === 'lasso') {
+      if (!lassoActive) return;
+      const point = { x: event.point.x, y: event.point.y, z: event.point.z };
+      setLassoPoints(prev => [...prev, point]);
+      lassoPointsRef.current.push(point);
+      return;
+    }
     if (!paintingMouseDownPos) return;
     const dx = Math.abs(event.clientX - paintingMouseDownPos.x);
     const dy = Math.abs(event.clientY - paintingMouseDownPos.y);
@@ -147,8 +185,66 @@ export function WorldMesh({
     }
   };
 
+  // Handle global pointer up for lasso
+  useEffect(() => {
+    const handleGlobalPointerUp = () => {
+      if (!lassoActiveRef.current || paintingMode !== 'lasso' || mode !== 'painting') return;
+
+      const polygon = lassoPointsRef.current;
+      if (polygon.length >= 3 && triangleMap) {
+        const containsPoint = (px: number, pz: number) => {
+          let inside = false;
+          for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const xi = polygon[i].x;
+            const zi = polygon[i].z;
+            const xj = polygon[j].x;
+            const zj = polygon[j].z;
+            const intersect = ((zi > pz) !== (zj > pz)) && (px < ((xj - xi) * (pz - zi)) / (zj - zi) + xi);
+            if (intersect) inside = !inside;
+          }
+          return inside;
+        };
+
+        const lassoSelected = new Set<number>();
+        triangleMap.forEach((tri, index) => {
+          const cx = (tri.transformedVertices.v0[0] + tri.transformedVertices.v1[0] + tri.transformedVertices.v2[0]) / 3;
+          const cz = (tri.transformedVertices.v0[2] + tri.transformedVertices.v1[2] + tri.transformedVertices.v2[2]) / 3;
+          if (containsPoint(cx, cz)) {
+            lassoSelected.add(index);
+          }
+        });
+
+        if (lassoSelected.size > 0) {
+          if (lassoOperationRef.current === 'replace') {
+            setPaintingSelectedTriangles(lassoSelected);
+          } else {
+            const next = new Set(paintingSelectedTriangles);
+            if (lassoOperationRef.current === 'add') {
+              lassoSelected.forEach(index => next.add(index));
+            } else {
+              lassoSelected.forEach(index => next.delete(index));
+            }
+            setPaintingSelectedTriangles(next);
+          }
+        }
+      }
+
+      setLassoActive(false);
+      lassoActiveRef.current = false;
+      setLassoPoints([]);
+      lassoPointsRef.current = [];
+    };
+
+    window.addEventListener('pointerup', handleGlobalPointerUp);
+    return () => window.removeEventListener('pointerup', handleGlobalPointerUp);
+  }, [mode, paintingMode, triangleMap, paintingSelectedTriangles, setPaintingSelectedTriangles]);
+
   const handlePaintingClick = (event: ThreeEvent<MouseEvent>) => {
     if (event.button !== 0 || disablePainting) return;
+    if (paintingMode === 'lasso') {
+      // Lasso is handled by global pointer up
+      return;
+    }
     if (mode === 'painting' && typeof event.faceIndex === 'number') {
       if (!paintingDragActive && !paintingHasToggled) {
         const isSelected = paintingSelectedTriangles.has(event.faceIndex);
@@ -245,6 +341,14 @@ export function WorldMesh({
               worldmapWidth={worldmap[0].length} 
               active={typeof gridActiveOverride === 'boolean' ? gridActiveOverride : (mode === 'export')}
               preselectedCell={preselectedCell}
+            />
+          )}
+          {paintingMode === 'lasso' && lassoPoints.length > 0 && (
+            <Line
+              points={lassoPoints.map(p => [p.x, p.y + 2, p.z] as [number, number, number])}
+              color={lassoOperation === 'subtract' ? '#ff0000' : '#ffff00'}
+              lineWidth={3}
+              depthTest={false}
             />
           )}
           {mode === 'painting' && paintingSelectedTriangles.size > 0 && triangleMap && (
