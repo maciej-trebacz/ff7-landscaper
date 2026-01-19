@@ -247,7 +247,15 @@ export function WorldMesh({
   const handlePaintingPointerMove = (event: ThreeEvent<PointerEvent>) => {
     if (disablePainting) return;
     if (lassoPasteActive && lassoClipboard && triangleMap) {
-      const center = { x: event.point.x, z: event.point.z };
+      // Transform event.point (World) to Map Space
+      const cosMap = Math.cos(-rotation);
+      const sinMap = Math.sin(-rotation);
+      const dxMap = event.point.x - mapCenter.x;
+      const dzMap = event.point.z - mapCenter.z;
+      const mapPointX = (dxMap * cosMap - dzMap * sinMap) + mapCenter.x;
+      const mapPointZ = (dxMap * sinMap + dzMap * cosMap) + mapCenter.z;
+
+      const center = { x: mapPointX, z: mapPointZ };
 
       const rotationRad = (lassoPasteRotationDeg * Math.PI) / 180;
       const cos = Math.cos(rotationRad);
@@ -330,13 +338,27 @@ export function WorldMesh({
       return;
     }
 
+    // Transform polygon points from World Space to Map Space
+    // The map is rotated by `rotation` around `mapCenter`
+    // We need to apply the inverse rotation to the world points to get map coordinates
+    const cos = Math.cos(-rotation);
+    const sin = Math.sin(-rotation);
+    const localPolygon = polygon.map(p => {
+      const dx = p.x - mapCenter.x;
+      const dz = p.z - mapCenter.z;
+      // Rotate around origin (which corresponds to mapCenter in this relative space)
+      const rx = dx * cos - dz * sin;
+      const rz = dx * sin + dz * cos;
+      return { x: rx + mapCenter.x, z: rz + mapCenter.z };
+    });
+
     const containsPoint = (px: number, pz: number) => {
       let inside = false;
-      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        const xi = polygon[i].x;
-        const zi = polygon[i].z;
-        const xj = polygon[j].x;
-        const zj = polygon[j].z;
+      for (let i = 0, j = localPolygon.length - 1; i < localPolygon.length; j = i++) {
+        const xi = localPolygon[i].x;
+        const zi = localPolygon[i].z;
+        const xj = localPolygon[j].x;
+        const zj = localPolygon[j].z;
         const intersect = ((zi > pz) !== (zj > pz)) && (px < ((xj - xi) * (pz - zi)) / (zj - zi) + xi);
         if (intersect) inside = !inside;
       }
@@ -373,8 +395,15 @@ export function WorldMesh({
   };
 
   useEffect(() => {
+    if (!lassoPasteActive) {
+      setPastePreviewTargets([]);
+    }
+  }, [lassoPasteActive]);
+
+  useEffect(() => {
+    if (!lassoPasteActive || mode !== 'painting') return;
+
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!lassoPasteActive || mode !== 'painting') return;
       if (event.key !== 'q' && event.key !== 'Q' && event.key !== 'e' && event.key !== 'E') return;
 
       event.preventDefault();
@@ -510,14 +539,6 @@ export function WorldMesh({
               preselectedCell={preselectedCell}
             />
           )}
-          {paintingMode === 'lasso' && lassoPoints.length > 0 && (
-            <Line
-              points={lassoPoints.map(p => [p.x, p.y + 2, p.z] as [number, number, number])}
-              color={lassoOperation === 'subtract' ? '#ff0000' : '#ffff00'}
-              lineWidth={3}
-              depthTest={false}
-            />
-          )}
           {lassoPasteActive && pastePreviewTargets.length > 0 && triangleMap && (
             Array.from(new Set(pastePreviewTargets)).map(faceIndex => {
               const tri = triangleMap[faceIndex];
@@ -551,6 +572,14 @@ export function WorldMesh({
           )}
         </group>
       </group>
+      {paintingMode === 'lasso' && lassoPoints.length > 0 && (
+        <Line
+          points={lassoPoints.map(p => [p.x, p.y + 2, p.z] as [number, number, number])}
+          color={lassoOperation === 'subtract' ? '#ff0000' : '#ffff00'}
+          lineWidth={3}
+          depthTest={false}
+        />
+      )}
     </group>
   );
 } 
