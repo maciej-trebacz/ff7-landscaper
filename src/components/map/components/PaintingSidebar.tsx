@@ -11,14 +11,15 @@ import {
 } from "@/components/ui/select";
 import { TexturePreview } from "@/components/ui/texture-preview";
 import { TRIANGLE_TYPES } from "@/lib/map-data";
+import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 import { useMessagesState } from "@/hooks/useMessagesState";
 
 interface PaintingValues {
   type: string | null;
   region: string | null;
-  scriptId: string;
-  isChocobo: boolean;
+  scriptId: string | null;
+  isChocobo: boolean | null;
   texture: string | null;
 }
 
@@ -33,13 +34,29 @@ interface CopiedTriangleData {
 }
 
 export function PaintingSidebar() {
-  const { paintingSelectedTriangles, worldmap, updateSelectedTriangles, updateTriangle, textures, togglePaintingSelectedTriangle, triangleMap } = useMaps();
+  const {
+    paintingSelectedTriangles,
+    worldmap,
+    updateSelectedTriangles,
+    updateTriangle,
+    textures,
+    togglePaintingSelectedTriangle,
+    triangleMap,
+    paintingMode,
+    setPaintingMode,
+    lassoClipboard,
+    lassoPasteActive,
+    lassoPasteRotationDeg,
+    copyLassoSelection,
+    setLassoPasteActive,
+    setLassoPasteRotation,
+  } = useMaps();
   const { messages } = useMessagesState();
   const [values, setValues] = useState<PaintingValues>({
     type: null,
     region: null,
-    scriptId: "0",
-    isChocobo: false,
+    scriptId: null,
+    isChocobo: null,
     texture: null
   });
   const [copiedTriangles, setCopiedTriangles] = useState<CopiedTriangleData[]>([]);
@@ -54,13 +71,15 @@ export function PaintingSidebar() {
     if (values.region !== null) {
       updates.locationId = parseInt(values.region);
     }
-    if (values.scriptId) {
+    if (values.scriptId !== null) {
       updates.script = parseInt(values.scriptId);
     }
     if (values.texture !== null) {
       updates.texture = parseInt(values.texture);
     }
-    updates.isChocobo = values.isChocobo;
+    if (values.isChocobo !== null) {
+      updates.isChocobo = values.isChocobo;
+    }
 
     updateSelectedTriangles(updates);
   };
@@ -113,9 +132,30 @@ export function PaintingSidebar() {
     handleClearSelection();
   };
 
+  const handleCopyArea = () => {
+    if (paintingSelectedTriangles.size === 0) return;
+    copyLassoSelection();
+  };
+
+  const handleStartPasteArea = () => {
+    if (!lassoClipboard) return;
+    setLassoPasteActive(true);
+  };
+
+  const handleCancelPasteArea = () => {
+    setLassoPasteActive(false);
+  };
+
   return (
     <>
       <h3 className="text-sm font-medium">Painting Mode</h3>
+      <div className="mt-2 flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">Lasso selection</span>
+        <Switch
+          checked={paintingMode === "lasso"}
+          onCheckedChange={(checked) => setPaintingMode(checked ? "lasso" : "click")}
+        />
+      </div>
       <div className="mt-4 space-y-4">
         <div className="flex space-x-1">
           <Button 
@@ -136,6 +176,52 @@ export function PaintingSidebar() {
           >
             Paste Texture & UVs
           </Button>
+        </div>
+        <div className="space-y-2">
+          <div className="flex space-x-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-xs px-2"
+              onClick={handleCopyArea}
+              disabled={paintingSelectedTriangles.size === 0}
+            >
+              Copy Area
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-xs px-2"
+              onClick={handleStartPasteArea}
+              disabled={!lassoClipboard || lassoPasteActive}
+            >
+              Paste Area
+            </Button>
+            {lassoPasteActive && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 text-xs px-2"
+                onClick={handleCancelPasteArea}
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
+          {lassoPasteActive && (
+            <div className="space-y-1">
+              <Label>Rotation: {lassoPasteRotationDeg}°</Label>
+              <input
+                type="range"
+                min={-180}
+                max={180}
+                step={5}
+                value={lassoPasteRotationDeg}
+                onChange={(e) => setLassoPasteRotation(parseFloat(e.target.value))}
+                className="w-full"
+              />
+            </div>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label>Triangle Type</Label>
@@ -204,7 +290,7 @@ export function PaintingSidebar() {
         <div className="space-y-1.5">
           <Label>Script ID</Label>
           <Select
-            value={values.scriptId}
+            value={values.scriptId ?? undefined}
             onValueChange={(value) => setValues(prev => ({ ...prev, scriptId: value }))}
           >
             <SelectTrigger className="h-8">
@@ -225,7 +311,7 @@ export function PaintingSidebar() {
         <div className="flex items-center space-x-2">
           <Checkbox 
             id="chocobo"
-            checked={values.isChocobo}
+            checked={values.isChocobo === true}
             onCheckedChange={(checked) => setValues(prev => ({ ...prev, isChocobo: checked === true }))}
           />
           <Label htmlFor="chocobo">Is Chocobo Area</Label>

@@ -9,16 +9,16 @@ export function PointSetRadiusUI({
   ctx: CallContext
   onBatch: (updates: Array<{ index: number; newText: string }>) => void
 }) {
-  const innerRadius = parseInt(ctx.args[0]?.text || "0", 10) || 0
-  const outerRadius = parseInt(ctx.args[1]?.text || "0", 10) || 0
-  
-  const handleInnerRadiusChange = (value: number) => {
-    onBatch([{ index: 0, newText: String(value) }])
-  }
-  
-  const handleOuterRadiusChange = (value: number) => {
-    onBatch([{ index: 1, newText: String(value) }])
-  }
+const outerRadius = parseInt(ctx.args[0]?.text || "0", 10) || 0
+const innerRadius = parseInt(ctx.args[1]?.text || "0", 10) || 0
+
+const handleOuterRadiusChange = (value: number) => {
+  onBatch([{ index: 0, newText: String(value) }])
+}
+
+const handleInnerRadiusChange = (value: number) => {
+  onBatch([{ index: 1, newText: String(value) }])
+}
 
   const containerSize = 320
   const centerX = containerSize / 2

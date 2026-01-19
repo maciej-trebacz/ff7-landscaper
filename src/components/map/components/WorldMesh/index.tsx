@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
+import { Line } from '@react-three/drei';
 import { useGeometry } from './hooks';
 import { useSelectedTriangleGeometry } from './hooks';
 import { RenderingMode } from '../../types';
@@ -27,6 +28,70 @@ interface WorldMeshProps {
   onWireframeOpacityUpdate?: (updateFn: (cameraHeight: number) => void) => void;
 }
 
+const HighlightTriangle = ({
+  tri,
+  color,
+  opacity,
+  renderOrder,
+  showEdges = false,
+  edgesColor = "#000",
+  edgesOpacity = 0.33
+}: {
+  tri: TriangleWithVertices;
+  color: string;
+  opacity: number;
+  renderOrder: number;
+  showEdges?: boolean;
+  edgesColor?: string;
+  edgesOpacity?: number;
+}) => {
+  const geometry = useMemo(() => {
+    const highlightPositions = new Float32Array(9);
+    highlightPositions.set([
+      tri.transformedVertices.v0[0], tri.transformedVertices.v0[1] + SELECTION_Y_OFFSET, tri.transformedVertices.v0[2],
+      tri.transformedVertices.v1[0], tri.transformedVertices.v1[1] + SELECTION_Y_OFFSET, tri.transformedVertices.v1[2],
+      tri.transformedVertices.v2[0], tri.transformedVertices.v2[1] + SELECTION_Y_OFFSET, tri.transformedVertices.v2[2]
+    ], 0);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(highlightPositions, 3));
+    geo.computeVertexNormals();
+    return geo;
+  }, [tri]);
+
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+    };
+  }, [geometry]);
+
+  return (
+    <group>
+      <mesh geometry={geometry} renderOrder={renderOrder}>
+        <meshBasicMaterial
+          color={color}
+          transparent={true}
+          opacity={opacity}
+          side={THREE.DoubleSide}
+          depthTest={false}
+          depthWrite={false}
+        />
+      </mesh>
+      {showEdges && (
+        <lineSegments renderOrder={renderOrder + 1}>
+          <edgesGeometry attach="geometry" args={[geometry]} />
+          <lineBasicMaterial
+            color={edgesColor}
+            opacity={edgesOpacity}
+            depthTest={false}
+            depthWrite={false}
+            transparent
+          />
+        </lineSegments>
+      )}
+    </group>
+  );
+};
+
 export function WorldMesh({
   renderingMode,
   onTriangleSelect,
@@ -50,8 +115,32 @@ export function WorldMesh({
   const [paintingDragActive, setPaintingDragActive] = useState(false);
   const [paintingDragStartMode, setPaintingDragStartMode] = useState<boolean | null>(null);
   const [paintingHasToggled, setPaintingHasToggled] = useState(false);
+  const [lassoActive, setLassoActive] = useState(false);
+  const [lassoPoints, setLassoPoints] = useState<{ x: number; y: number; z: number }[]>([]);
+  const [lassoOperation, setLassoOperation] = useState<'replace' | 'add' | 'subtract'>('replace');
+  const [pastePreviewTargets, setPastePreviewTargets] = useState<number[]>([]);
+
+  const lassoPointsRef = useRef<{ x: number; y: number; z: number }[]>([]);
+  const lassoActiveRef = useRef(false);
+  const lassoOperationRef = useRef<'replace' | 'add' | 'subtract'>('replace');
+
   const wireframeMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
-  const { textures, worldmap, mapType, paintingSelectedTriangles, togglePaintingSelectedTriangle, setTriangleMap } = useMaps();
+  const {
+    textures,
+    worldmap,
+    mapType,
+    paintingSelectedTriangles,
+    togglePaintingSelectedTriangle,
+    setTriangleMap,
+    paintingMode,
+    setPaintingSelectedTriangles,
+    lassoClipboard,
+    lassoPasteActive,
+    lassoPasteRotationDeg,
+    applyLassoPaste,
+    setLassoPasteActive,
+    setLassoPasteRotation,
+  } = useMaps();
 
   const { loadTextureAtlas } = useTextureAtlas();
   const { texture, canvas, texturePositions } = loadTextureAtlas(textures, mapType);
@@ -124,6 +213,28 @@ export function WorldMesh({
 
   const handlePaintingPointerDown = (event: ThreeEvent<PointerEvent>) => {
     if (event.button !== 0 || disablePainting) return;
+    if (lassoPasteActive) return;
+    if (paintingMode === 'lasso') {
+      if (mode === 'painting') {
+        setLassoActive(true);
+        lassoActiveRef.current = true;
+
+        const operation: 'replace' | 'add' | 'subtract' =
+          event.altKey
+            ? 'subtract'
+            : paintingSelectedTriangles.size === 0
+              ? 'replace'
+              : 'add';
+
+        setLassoOperation(operation);
+        lassoOperationRef.current = operation;
+
+        const point = { x: event.point.x, y: event.point.y, z: event.point.z };
+        setLassoPoints([point]);
+        lassoPointsRef.current = [point];
+      }
+      return;
+    }
     setPaintingMouseDownPos({ x: event.clientX, y: event.clientY });
     if (mode === 'painting' && typeof event.faceIndex === 'number') {
       const alreadySelected = paintingSelectedTriangles.has(event.faceIndex);
@@ -135,6 +246,73 @@ export function WorldMesh({
 
   const handlePaintingPointerMove = (event: ThreeEvent<PointerEvent>) => {
     if (disablePainting) return;
+    if (lassoPasteActive && lassoClipboard && triangleMap) {
+      // Transform event.point (World) to Map Space
+      const cosMap = Math.cos(-rotation);
+      const sinMap = Math.sin(-rotation);
+      const dxMap = event.point.x - mapCenter.x;
+      const dzMap = event.point.z - mapCenter.z;
+      const mapPointX = (dxMap * cosMap - dzMap * sinMap) + mapCenter.x;
+      const mapPointZ = (dxMap * sinMap + dzMap * cosMap) + mapCenter.z;
+
+      const center = { x: mapPointX, z: mapPointZ };
+
+      const rotationRad = (lassoPasteRotationDeg * Math.PI) / 180;
+      const cos = Math.cos(rotationRad);
+      const sin = Math.sin(rotationRad);
+
+      const centers = triangleMap.map((tri, index) => {
+        const cx = (tri.transformedVertices.v0[0] + tri.transformedVertices.v1[0] + tri.transformedVertices.v2[0]) / 3;
+        const cz = (tri.transformedVertices.v0[2] + tri.transformedVertices.v1[2] + tri.transformedVertices.v2[2]) / 3;
+        return { index, cx, cz };
+      });
+
+      const used = new Set<number>();
+      const targets: number[] = [];
+
+      lassoClipboard.sourceFaceIndices.forEach(sourceIndex => {
+        const sourceCenter = centers[sourceIndex];
+        if (!sourceCenter) return;
+
+        const dx = sourceCenter.cx - lassoClipboard.centerX;
+        const dz = sourceCenter.cz - lassoClipboard.centerZ;
+
+        const rx = cos * dx - sin * dz;
+        const rz = sin * dx + cos * dz;
+
+        const tx = center.x + rx;
+        const tz = center.z + rz;
+
+        let bestIndex = -1;
+        let bestDistSq = Infinity;
+
+        centers.forEach(c => {
+          if (used.has(c.index)) return;
+          const ddx = c.cx - tx;
+          const ddz = c.cz - tz;
+          const distSq = ddx * ddx + ddz * ddz;
+          if (distSq < bestDistSq) {
+            bestDistSq = distSq;
+            bestIndex = c.index;
+          }
+        });
+
+        if (bestIndex !== -1) {
+          used.add(bestIndex);
+          targets.push(bestIndex);
+        }
+      });
+
+      setPastePreviewTargets(targets);
+      return;
+    }
+    if (paintingMode === 'lasso') {
+      if (!lassoActive) return;
+      const point = { x: event.point.x, y: event.point.y, z: event.point.z };
+      setLassoPoints(prev => [...prev, point]);
+      lassoPointsRef.current.push(point);
+      return;
+    }
     if (!paintingMouseDownPos) return;
     const dx = Math.abs(event.clientX - paintingMouseDownPos.x);
     const dy = Math.abs(event.clientY - paintingMouseDownPos.y);
@@ -147,8 +325,121 @@ export function WorldMesh({
     }
   };
 
+  const handlePaintingPointerUp = () => {
+    if (!lassoActiveRef.current || paintingMode !== 'lasso' || mode !== 'painting') return;
+    if (!triangleMap) return;
+
+    const polygon = lassoPointsRef.current;
+    if (polygon.length < 3) {
+      setLassoActive(false);
+      lassoActiveRef.current = false;
+      setLassoPoints([]);
+      lassoPointsRef.current = [];
+      return;
+    }
+
+    // Transform polygon points from World Space to Map Space
+    // The map is rotated by `rotation` around `mapCenter`
+    // We need to apply the inverse rotation to the world points to get map coordinates
+    const cos = Math.cos(-rotation);
+    const sin = Math.sin(-rotation);
+    const localPolygon = polygon.map(p => {
+      const dx = p.x - mapCenter.x;
+      const dz = p.z - mapCenter.z;
+      // Rotate around origin (which corresponds to mapCenter in this relative space)
+      const rx = dx * cos - dz * sin;
+      const rz = dx * sin + dz * cos;
+      return { x: rx + mapCenter.x, z: rz + mapCenter.z };
+    });
+
+    const containsPoint = (px: number, pz: number) => {
+      let inside = false;
+      for (let i = 0, j = localPolygon.length - 1; i < localPolygon.length; j = i++) {
+        const xi = localPolygon[i].x;
+        const zi = localPolygon[i].z;
+        const xj = localPolygon[j].x;
+        const zj = localPolygon[j].z;
+        const intersect = ((zi > pz) !== (zj > pz)) && (px < ((xj - xi) * (pz - zi)) / (zj - zi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    };
+
+    const lassoSelected = new Set<number>();
+    triangleMap.forEach((tri, index) => {
+      const cx = (tri.transformedVertices.v0[0] + tri.transformedVertices.v1[0] + tri.transformedVertices.v2[0]) / 3;
+      const cz = (tri.transformedVertices.v0[2] + tri.transformedVertices.v1[2] + tri.transformedVertices.v2[2]) / 3;
+      if (containsPoint(cx, cz)) {
+        lassoSelected.add(index);
+      }
+    });
+
+    if (lassoSelected.size > 0) {
+      if (lassoOperationRef.current === 'replace') {
+        setPaintingSelectedTriangles(lassoSelected);
+      } else {
+        const next = new Set(paintingSelectedTriangles);
+        if (lassoOperationRef.current === 'add') {
+          lassoSelected.forEach(index => next.add(index));
+        } else {
+          lassoSelected.forEach(index => next.delete(index));
+        }
+        setPaintingSelectedTriangles(next);
+      }
+    }
+
+    setLassoActive(false);
+    lassoActiveRef.current = false;
+    setLassoPoints([]);
+    lassoPointsRef.current = [];
+  };
+
+  useEffect(() => {
+    if (!lassoPasteActive) {
+      setPastePreviewTargets([]);
+    }
+  }, [lassoPasteActive]);
+
+  useEffect(() => {
+    if (!lassoPasteActive || mode !== 'painting') return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'q' && event.key !== 'Q' && event.key !== 'e' && event.key !== 'E') return;
+
+      event.preventDefault();
+
+      const step = 5;
+      let next = lassoPasteRotationDeg;
+      if (event.key === 'q' || event.key === 'Q') {
+        next -= step;
+      } else {
+        next += step;
+      }
+
+      if (next > 180) next -= 360;
+      if (next < -180) next += 360;
+
+      setLassoPasteRotation(next);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lassoPasteActive, lassoPasteRotationDeg, mode, setLassoPasteRotation]);
+
   const handlePaintingClick = (event: ThreeEvent<MouseEvent>) => {
     if (event.button !== 0 || disablePainting) return;
+    if (lassoPasteActive) {
+      if (pastePreviewTargets.length > 0) {
+        applyLassoPaste(pastePreviewTargets);
+      }
+      setLassoPasteActive(false);
+      setPastePreviewTargets([]);
+      return;
+    }
+    if (paintingMode === 'lasso') {
+      // Lasso is handled by global pointer up
+      return;
+    }
     if (mode === 'painting' && typeof event.faceIndex === 'number') {
       if (!paintingDragActive && !paintingHasToggled) {
         const isSelected = paintingSelectedTriangles.has(event.faceIndex);
@@ -187,6 +478,7 @@ export function WorldMesh({
             geometry={geometry}
             onPointerDown={mode === 'painting' ? handlePaintingPointerDown : handlePointerDown}
             onPointerMove={mode === 'painting' ? handlePaintingPointerMove : undefined}
+            onPointerUp={mode === 'painting' ? handlePaintingPointerUp : undefined}
             onClick={mode === 'painting' ? handlePaintingClick : handleClick}
             renderOrder={0}
           >
@@ -247,49 +539,47 @@ export function WorldMesh({
               preselectedCell={preselectedCell}
             />
           )}
+          {lassoPasteActive && pastePreviewTargets.length > 0 && triangleMap && (
+            Array.from(new Set(pastePreviewTargets)).map(faceIndex => {
+              const tri = triangleMap[faceIndex];
+              if (!tri) return null;
+              return (
+                <HighlightTriangle
+                  key={`paste-${faceIndex}`}
+                  tri={tri}
+                  color="#ff8800"
+                  opacity={0.4}
+                  renderOrder={8}
+                />
+              );
+            })
+          )}
           {mode === 'painting' && paintingSelectedTriangles.size > 0 && triangleMap && (
             Array.from(paintingSelectedTriangles).map(faceIndex => {
               const tri = triangleMap[faceIndex];
               if (!tri) return null;
-              const highlightPositions = new Float32Array(9);
-              highlightPositions.set([
-                tri.transformedVertices.v0[0], tri.transformedVertices.v0[1] + SELECTION_Y_OFFSET, tri.transformedVertices.v0[2],
-                tri.transformedVertices.v1[0], tri.transformedVertices.v1[1] + SELECTION_Y_OFFSET, tri.transformedVertices.v1[2],
-                tri.transformedVertices.v2[0], tri.transformedVertices.v2[1] + SELECTION_Y_OFFSET, tri.transformedVertices.v2[2]
-              ], 0);
-              const selectedGeometry = new THREE.BufferGeometry();
-              selectedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(highlightPositions, 3));
-              selectedGeometry.computeVertexNormals();
               return (
-                <group key={faceIndex}>
-                  {/* White semi-transparent fill */}
-                  <mesh geometry={selectedGeometry} renderOrder={9}>
-                    <meshBasicMaterial 
-                      color="#ffffff" 
-                      transparent={true}
-                      opacity={0.33}
-                      side={THREE.DoubleSide}
-                      depthTest={false}
-                      depthWrite={false}
-                    />
-                  </mesh>
-                  {/* Magenta outline */}
-                  <lineSegments renderOrder={10}>
-                    <edgesGeometry attach="geometry" args={[selectedGeometry]} />
-                    <lineBasicMaterial 
-                      color="#000" 
-                      opacity={0.33}
-                      depthTest={false} 
-                      depthWrite={false}
-                      transparent
-                    />
-                  </lineSegments>
-                </group>
+                <HighlightTriangle
+                  key={faceIndex}
+                  tri={tri}
+                  color="#ffffff"
+                  opacity={0.33}
+                  renderOrder={9}
+                  showEdges={true}
+                />
               );
             })
           )}
         </group>
       </group>
+      {paintingMode === 'lasso' && lassoPoints.length > 0 && (
+        <Line
+          points={lassoPoints.map(p => [p.x, p.y + 2, p.z] as [number, number, number])}
+          color={lassoOperation === 'subtract' ? '#ff0000' : '#ffff00'}
+          lineWidth={3}
+          depthTest={false}
+        />
+      )}
     </group>
   );
 } 
