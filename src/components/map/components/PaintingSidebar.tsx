@@ -210,7 +210,12 @@ export function PaintingSidebar() {
           </div>
           {lassoPasteActive && (
             <div className="space-y-1">
-              <Label>Paste Rotation</Label>
+              <div className="flex items-center justify-between">
+                <Label>Paste Rotation</Label>
+                <span className="text-xs text-muted-foreground">
+                  {Math.round(lassoPasteRotationDeg)}°
+                </span>
+              </div>
               <input
                 type="range"
                 min={-180}

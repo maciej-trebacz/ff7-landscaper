@@ -535,10 +535,19 @@ export function useMaps() {
       }
 
       const entry = prev.maps[activeId];
-      const nextEntry = mode === 'painting' ? entry : {
-        ...entry,
-        paintingSelectedTriangles: new Set(),
-      };
+      const nextEntry: LoadedMapState =
+        mode === 'painting'
+          ? {
+              ...entry,
+              lassoPasteActive: false,
+              lassoPasteRotationDeg: 0,
+            }
+          : {
+              ...entry,
+              paintingSelectedTriangles: new Set(),
+              lassoPasteActive: false,
+              lassoPasteRotationDeg: 0,
+            };
 
       return {
         ...prev,
