@@ -47,6 +47,8 @@ The app works directly with FF7 binary files using TypeScript parsers in `src/ff
 - Textures: Various texture formats
 - Scripts: Custom worldscript bytecode with full language implementation
 
+Worldscript immediate constants are unsigned 16-bit values. Emit negative numeric literals as a positive magnitude followed by `NEG`, not as two's-complement immediates.
+
 ## UI Guidelines
 
 - Dark theme with "slate" base color scheme
