@@ -599,6 +599,67 @@ RETURN
     expect(result.trim()).toBe(expected.trim());
   });
 
+  it.each([
+    ['set_rotation_speed', -5, '05', 'SET_CAM_SPEED'],
+    ['set_tilt_speed', -3, '03', 'SET_CAM_TILT'],
+    ['set_zoom_speed', -50, '32', 'SET_CAM_ZOOM'],
+    ['set_rotation_speed', -32768, '8000', 'SET_CAM_SPEED'],
+  ])('should preserve negative arguments for Camera.%s(%i)', (method, value, magnitude, opcode) => {
+    const result = worldscript.compile(`Camera.${method}(${value})`);
+
+    expect(result).toBe(`RESET\nPUSH_CONSTANT ${magnitude}\nNEG\n${opcode}`);
+  });
+
+  it.each([
+    [0, '00'],
+    [5, '05'],
+    [32768, '8000'],
+    [65531, 'FFFB'],
+    [65535, 'FFFF'],
+  ])('should preserve unsigned immediate constant %i', (value, word) => {
+    const result = worldscript.compile(`Camera.set_rotation_speed(${value})`);
+
+    expect(result).toBe(`RESET\nPUSH_CONSTANT ${word}\nSET_CAM_SPEED`);
+  });
+
+  it('should preserve negative camera speeds and relocate jumps when recompiling', () => {
+    const script = `RESET
+PUSH_SAVEMAP_WORD 00
+PUSH_CONSTANT 64
+EQ
+GOTO_IF_FALSE 100D
+RESET
+PUSH_CONSTANT 05
+NEG
+SET_CAM_SPEED
+RETURN`;
+    const decompiled = new Worldscript(0x1000).decompile(script);
+    const recompiled = new Worldscript(0x2000).compile(decompiled);
+
+    expect(recompiled).toBe(script.replace('100D', '200D'));
+  });
+
+  it('should preserve the cargo ship camera script when saving an EV file', () => {
+    const fileData = fs.readFileSync(path.resolve('data/wm0.ev'));
+    const evFile = new EvFile(new Uint8Array(fileData));
+    const cargo = evFile.getModelFunctions().find(fn => fn.modelId === 8 && fn.id === 0);
+    expect(cargo).toBeDefined();
+    const originalScript = new Worldscript(cargo.offset).decompile(cargo.script);
+    const compiledScript = new Worldscript(cargo.offset).compile(originalScript);
+    expect(compiledScript).toBe(cargo.script);
+    evFile.setFunctionScript(
+      evFile.functions.indexOf(cargo),
+      compiledScript
+    );
+
+    const savedFile = new EvFile(evFile.writeFile());
+    const savedCargo = savedFile.getModelFunctions().find(fn => fn.modelId === 8 && fn.id === 0);
+    expect(savedCargo).toBeDefined();
+    const savedScript = new Worldscript(savedCargo.offset).decompile(savedCargo.script);
+
+    expect(savedScript).toBe(originalScript);
+  });
+
   it('should compile scripts with unary operators correctly', () => {
     worldscript = new Worldscript(0x1000);
     const script = `
@@ -834,7 +895,8 @@ return
 
     const expected = `
 RESET
-PUSH_CONSTANT FFFE
+PUSH_CONSTANT 02
+NEG
 SET_SUBMARINE
 RETURN
 `;

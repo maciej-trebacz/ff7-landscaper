@@ -945,6 +945,14 @@ export class Worldscript {
     switch (expr.type) {
       case 'Literal':
         const value = typeof expr.value === 'boolean' ? (expr.value ? 1 : 0) : expr.value;
+        if (typeof value === 'number' && value < 0) {
+          // Immediate constants are unsigned; preserve negative values with runtime negation.
+          return this.generateUnaryExpression({
+            type: 'Unary',
+            operator: '-',
+            operand: { type: 'Literal', value: -value }
+          });
+        }
         return [{ type: 'instruction', mnemonic: 'PUSH_CONSTANT', codeParams: [this.numberToHexString(value)] }];
       case 'Identifier':
         throw new Error('Bare identifiers are not supported in expressions.');
